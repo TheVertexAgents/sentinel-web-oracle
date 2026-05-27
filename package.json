@@ -1,0 +1,35 @@
+{
+  "name": "sentinel-web-oracle",
+  "version": "0.1.0",
+  "description": "Agentic crypto threat intelligence powered by Bright Data live web infrastructure",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "ts-node src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "lint": "eslint src/**/*.ts"
+  },
+  "keywords": [
+    "bright-data",
+    "ai-agent",
+    "mcp",
+    "crypto",
+    "threat-intelligence",
+    "web-scraping",
+    "security"
+  ],
+  "author": "NullSentinel",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.20.0",
+    "axios": "^1.6.0",
+    "dotenv": "^16.0.0",
+    "express": "^4.18.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.0",
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  }
+}
