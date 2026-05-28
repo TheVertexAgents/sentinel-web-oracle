@@ -229,6 +229,42 @@ All vars are loaded from `.env` via `dotenv` in `src/config/zones.ts`.
 
 ---
 
+## 12. Live Verification Results
+
+Both Bright Data zones confirmed working end-to-end:
+
+**SERP API (`serp_api1`)** — HTTP 200, returns structured JSON with `organic[]` results
+
+**Web Unlocker (`web_unlocker1`)** — HTTP 200, returns full page HTML (CoinTelegraph, Bright Data test URL)
+
+**Full pipeline run — `POST /analyze {"asset":"ETH"}`:**
+```
+[Agent] search_web: 'ETH crypto asset news'
+[Agent] search_web: 'ETH exploit news last 24h'
+[Agent] search_web: 'ETH SEC enforcement'
+[Agent] scrape_url: coindesk.com/eth-exploit...
+[Agent] scrape_url: cointelegraph.com/news/eth-flash-loan...
+[Agent] scrape_url: coindesk.com/markets/...
+[Oracle] Verdict: CRITICAL → Action: HOLD
+```
+
+Response:
+```json
+{
+  "asset": "ETH",
+  "threatLevel": "CRITICAL",
+  "summary": "Exploit and flash loan attack on ETH",
+  "evidence": [
+    { "title": "ETH exploit leads to $2 million loss...", "url": "..." },
+    { "title": "ETH flash loan attack drains $1.5M...", "url": "..." }
+  ],
+  "riskAction": "HOLD",
+  "riskReason": "Critical threat detected for ETH. Immediate halt recommended."
+}
+```
+
+---
+
 ## 12. First Prompt Suggestion for Consuming Agent
 
 If you are an agent picking this up, a safe first prompt is:
