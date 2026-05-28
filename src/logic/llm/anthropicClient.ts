@@ -39,12 +39,25 @@ function toAnthropicMessages(
 }
 
 export class AnthropicLLMClient implements LLMClient {
-  private client: Anthropic;
+  private primaryClient: Anthropic | null = null;
+  private fallbackClient: Anthropic | null = null;
   private model: string;
 
-  constructor(apiKey: string, model: string) {
-    this.client = new Anthropic({ apiKey });
+  constructor(model: string, anthropicKey?: string, aimlKey?: string) {
     this.model = model;
+    if (anthropicKey) {
+      this.primaryClient = new Anthropic({ apiKey: anthropicKey });
+    }
+    if (aimlKey) {
+      this.fallbackClient = new Anthropic({
+        apiKey: aimlKey,
+        baseURL: 'https://api.aimlapi.com',
+      });
+    }
+
+    if (!this.primaryClient && !this.fallbackClient) {
+      throw new Error('Either ANTHROPIC_API_KEY or AIML_API_KEY must be provided.');
+    }
   }
 
   async chat(
@@ -52,7 +65,41 @@ export class AnthropicLLMClient implements LLMClient {
     messages: ConversationMessage[],
     tools: ToolDefinition[],
   ): Promise<LLMResponse> {
-    const response = await this.client.messages.create({
+    let lastError: Error | null = null;
+
+    // 1. Try standard Anthropic first (Hackathon judging preference)
+    if (this.primaryClient) {
+      try {
+        console.log(`[LLM/Anthropic] Attempting request via standard Anthropic API...`);
+        return await this.executeChat(this.primaryClient, systemPrompt, messages, tools);
+      } catch (err: any) {
+        lastError = err;
+        console.warn(`[LLM/Anthropic] Standard API failed: ${err.message}`);
+        if (!this.fallbackClient) throw err;
+      }
+    }
+
+    // 2. Fallback to AI/ML API (User preference/backup)
+    if (this.fallbackClient) {
+      try {
+        console.log(`[LLM/Anthropic] Falling back to AI/ML API...`);
+        return await this.executeChat(this.fallbackClient, systemPrompt, messages, tools);
+      } catch (err: any) {
+        console.error(`[LLM/Anthropic] AI/ML API fallback failed: ${err.message}`);
+        throw lastError || err;
+      }
+    }
+
+    throw lastError || new Error('No LLM clients available');
+  }
+
+  private async executeChat(
+    client: Anthropic,
+    systemPrompt: string,
+    messages: ConversationMessage[],
+    tools: ToolDefinition[],
+  ): Promise<LLMResponse> {
+    const response = await client.messages.create({
       model: this.model,
       max_tokens: 4096,
       system: systemPrompt,

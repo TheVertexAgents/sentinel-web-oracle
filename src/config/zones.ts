@@ -5,7 +5,7 @@ const provider = (process.env.AI_PROVIDER || 'groq').toLowerCase();
 
 // Default model per provider
 const defaultModel =
-  provider === 'anthropic' ? 'claude-sonnet-4-20250514' : 'llama-3.3-70b-versatile';
+  provider === 'anthropic' ? 'claude-sonnet-4-6' : 'llama-3.3-70b-versatile';
 
 export const config = {
   brightdata: {
@@ -19,6 +19,7 @@ export const config = {
     provider,
     model: process.env.AI_MODEL || defaultModel,
     anthropicKey: process.env.ANTHROPIC_API_KEY || '',
+    aimlKey: process.env.AIML_API_KEY || '',
     groqKey: process.env.GROQ_API_KEY || '',
   },
   server: {

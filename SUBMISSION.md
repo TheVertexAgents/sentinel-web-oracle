@@ -42,7 +42,7 @@ User / MCP Client / Dashboard
   └── GET  /stream    → SSE real-time events
          │
          ▼
-  Agentic Loop (Groq llama-3.3-70b-versatile)
+  Agentic Loop (Anthropic claude-sonnet-4-6 via AI/ML API)
   ├── Tool: search_web      → Bright Data SERP API
   ├── Tool: scrape_url      → Bright Data Web Unlocker
   └── Tool: browser_scrape  → Bright Data Scraping Browser
@@ -88,6 +88,8 @@ This entire project was scaffolded, structured, debugged, and iterated using **K
 - Bright Data Web Unlocker
 - Bright Data Scraping Browser
 - Bright Data MCP Server
+- AI/ML API (Anthropic Integration)
+- Anthropic Claude 3.6 Sonnet
 - Groq
 - Llama 3.3
 - TypeScript
