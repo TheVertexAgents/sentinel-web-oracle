@@ -19,11 +19,12 @@ During initial testing with the Groq `llama-3.3-70b-versatile` model, one instan
 - **Root Cause:** The Llama-3.3 model occasionally generated invalid tool call syntax when attempting parallel calls (specifically observed during the "ETH flash loan attack" query).
 - **Resolution:** To mitigate this, we implemented support for Anthropic's `claude-sonnet-4-6` via the AI/ML API. Anthropic models have superior native handling for parallel tool calls and complex schema adherence, resulting in a 100% success rate in subsequent stress tests.
 
-## 3. Anthropic Integration Verification
-- **Implementation:** The `AnthropicLLMClient` was extended to support the AI/ML API endpoint (`https://api.aimlapi.com`) using the official `@anthropic-ai/sdk`.
-- **Configuration:** The system now prioritizes `AIML_API_KEY` for Anthropic requests, falling back to `ANTHROPIC_API_KEY` if necessary.
-- **Default Model:** `claude-sonnet-4-6` is now the default model for the Anthropic provider, providing the high-fidelity reasoning required for institutional-grade threat analysis.
-- **Compatibility:** Verified that the integration maintains 100% compatibility with the project's existing tool-execution loop and message block structure.
+## 3. Anthropic Integration & Graceful Fallback
+- **Dual-Client Architecture:** The `AnthropicLLMClient` now initializes two internal SDK instances: a primary client for standard Anthropic and a fallback client for the AI/ML API.
+- **Graceful Error Handling:** Implemented a `try...catch` reasoning loop. The system attempts to use the official Anthropic API first (judging preference). If the call fails (e.g., due to insufficient balance or rate limits), it automatically falls back to the AI/ML API to ensure uninterrupted analysis.
+- **Configuration:** The system detects `ANTHROPIC_API_KEY` and `AIML_API_KEY` independently. Both can be provided simultaneously to enable the fallback mechanism.
+- **Default Model:** `claude-sonnet-4-6` is used across both endpoints to maintain consistent tool orchestration performance.
+- **Compatibility:** Verified that both endpoints return compatible JSON structures, maintaining 100% adherence to the project's agentic loop.
 
 ## 4. MCP Server Performance
 

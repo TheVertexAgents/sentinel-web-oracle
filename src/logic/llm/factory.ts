@@ -11,17 +11,11 @@ export function getLLMClient(): LLMClient {
   const provider = config.llm.provider;
 
   if (provider === 'anthropic') {
-    const isAiml = !!config.llm.aimlKey;
-    const apiKey = isAiml ? config.llm.aimlKey : config.llm.anthropicKey;
-    const baseURL = isAiml ? 'https://api.aimlapi.com' : undefined;
-
-    if (!apiKey) {
-      throw new Error(
-        'ANTHROPIC_API_KEY or AIML_API_KEY is required when AI_PROVIDER=anthropic',
-      );
-    }
-
-    return new AnthropicLLMClient(apiKey, config.llm.model, baseURL);
+    return new AnthropicLLMClient(
+      config.llm.model,
+      config.llm.anthropicKey,
+      config.llm.aimlKey,
+    );
   }
 
   // Default: groq
