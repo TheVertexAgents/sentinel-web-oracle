@@ -22,10 +22,15 @@ export async function searchWeb(query: string): Promise<SearchResult[]> {
     }
   );
 
-  const body = JSON.parse(response.data.body);
+  // Bright Data SERP API returns parsed JSON directly as response.data
+  // organic results use 'link' field (not 'url')
+  const body = typeof response.data === 'string'
+    ? JSON.parse(response.data)
+    : response.data;
+
   return (body.organic || []).slice(0, 5).map((r: any) => ({
-    title: r.title,
-    url: r.url,
-    description: r.description || '',
+    title: r.title || '',
+    url: r.link || r.url || '',
+    description: r.description || r.snippet || '',
   }));
 }
