@@ -8,8 +8,11 @@ export interface ThreatVerdict {
   asset: string;
   threatLevel: 'CRITICAL' | 'ELEVATED' | 'NOMINAL';
   summary: string;
-  evidence: { title: string; url: string }[];
+  evidence: { title: string; url: string; source: string; publishedAt?: string }[];
   timestamp: string;
+  confidenceScore: number;
+  sourcesChecked: string[];
+  brightDataCallsUsed: number;
 }
 
 /** SSE event emitted during the agentic loop so the UI can show live progress. */
@@ -31,7 +34,11 @@ Only call CRITICAL if you have confirmed evidence from at least one scraped arti
 - A technical exploit, hack, or flash loan attack with specific dollar amounts or transaction hashes
 - An official SEC/regulatory cease-and-desist or enforcement action
 All evidence must be timestamped within the last 4 hours.
-Always return a JSON object with: threatLevel, summary, evidence (array of {title, url}).`;
+Always return a JSON object with:
+- threatLevel: "CRITICAL" | "ELEVATED" | "NOMINAL"
+- summary: string
+- evidence: array of {title, url, source, publishedAt}
+- confidenceScore: number (0-100)`;
 
 const tools: ToolDefinition[] = [
   {
@@ -69,8 +76,24 @@ const tools: ToolDefinition[] = [
   },
 ];
 
-async function runTool(call: ToolCall, emit?: EventEmitter): Promise<string> {
+async function runTool(
+  call: ToolCall,
+  emit?: EventEmitter,
+  metrics?: { calls: number; sources: Set<string> }
+): Promise<string> {
   let result: string;
+
+  if (metrics) {
+    metrics.calls += 1;
+    if (call.input.url) {
+      try {
+        const domain = new URL(call.input.url as string).hostname;
+        metrics.sources.add(domain);
+      } catch (e) {
+        // ignore invalid urls
+      }
+    }
+  }
 
   try {
     if (call.name === 'search_web') {
@@ -108,6 +131,7 @@ export async function runAgentLoop(
   emit?: EventEmitter,
 ): Promise<ThreatVerdict> {
   const llm = getLLMClient();
+  const metrics = { calls: 0, sources: new Set<string>() };
 
   const messages: ConversationMessage[] = [
     {
@@ -134,7 +158,7 @@ Follow this process:
 
     const toolResults = await Promise.all(
       response.toolCalls.map(async (call) => {
-        const result = await runTool(call, emit);
+        const result = await runTool(call, emit, metrics);
         return { tool_use_id: call.id, content: result };
       }),
     );
@@ -157,6 +181,9 @@ Follow this process:
       summary: 'Agent completed analysis but returned no structured verdict.',
       evidence: [],
       timestamp: new Date().toISOString(),
+      confidenceScore: 0,
+      sourcesChecked: Array.from(metrics.sources),
+      brightDataCallsUsed: metrics.calls,
     };
   }
 
@@ -167,5 +194,8 @@ Follow this process:
     summary: parsed.summary || '',
     evidence: parsed.evidence || [],
     timestamp: new Date().toISOString(),
+    confidenceScore: parsed.confidenceScore || 0,
+    sourcesChecked: Array.from(metrics.sources),
+    brightDataCallsUsed: metrics.calls,
   };
 }
