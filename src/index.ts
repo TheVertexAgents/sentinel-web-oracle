@@ -5,6 +5,8 @@ import { runAgentLoop } from './logic/agentLoop';
 import { assessRisk } from './logic/strategy/risk_assessment';
 import { config } from './config/zones';
 import type { AgentEvent } from './logic/agentLoop';
+import { initDb } from './logic/db';
+import { initMonitoring, runAnalyisAndTrack } from './logic/monitoring';
 
 dotenv.config();
 
@@ -28,10 +30,9 @@ app.post('/analyze', async (req, res) => {
 
   console.log(`[Oracle] Analyzing: ${asset}`);
   try {
-    const verdict = await runAgentLoop(asset);
-    const decision = assessRisk(verdict);
-    console.log(`[Oracle] Verdict: ${verdict.threatLevel} → ${decision.action}`);
-    return res.json({ ...verdict, riskAction: decision.action, riskReason: decision.reason });
+    const fullVerdict = await runAnalyisAndTrack(asset);
+    console.log(`[Oracle] Verdict: ${fullVerdict.threatLevel} → ${fullVerdict.riskAction}`);
+    return res.json(fullVerdict);
   } catch (err: any) {
     console.error('[Oracle] Error:', err.message);
     return res.status(500).json({ error: 'Analysis failed.', detail: err.message });
@@ -61,15 +62,8 @@ app.get('/stream', async (req, res) => {
   console.log(`[Oracle/SSE] Analyzing: ${asset}`);
 
   try {
-    const verdict = await runAgentLoop(asset, send);
-    const decision = assessRisk(verdict);
-
-    send({
-      type: 'verdict',
-      verdict: { ...verdict, riskAction: decision.action, riskReason: decision.reason },
-    });
-
-    console.log(`[Oracle/SSE] Verdict: ${verdict.threatLevel} → ${decision.action}`);
+    const fullVerdict = await runAnalyisAndTrack(asset, send);
+    console.log(`[Oracle/SSE] Verdict: ${fullVerdict.threatLevel} → ${fullVerdict.riskAction}`);
   } catch (err: any) {
     console.error('[Oracle/SSE] Error:', err.message);
     send({ type: 'error', message: err.message });
@@ -78,9 +72,19 @@ app.get('/stream', async (req, res) => {
   res.end();
 });
 
-app.listen(config.server.port, () => {
-  console.log(`🛡️  Sentinel Web Oracle running on port ${config.server.port}`);
-  console.log(`   UI → http://localhost:${config.server.port}`);
-  console.log(`   API → POST http://localhost:${config.server.port}/analyze`);
-  console.log(`   SSE → GET  http://localhost:${config.server.port}/stream?asset=BTC`);
+async function main() {
+  await initDb();
+  await initMonitoring();
+
+  app.listen(config.server.port, () => {
+    console.log(`🛡️  Sentinel Web Oracle running on port ${config.server.port}`);
+    console.log(`   UI → http://localhost:${config.server.port}`);
+    console.log(`   API → POST http://localhost:${config.server.port}/analyze`);
+    console.log(`   SSE → GET  http://localhost:${config.server.port}/stream?asset=BTC`);
+  });
+}
+
+main().catch(err => {
+  console.error('[Fatal] Startup failed:', err);
+  process.exit(1);
 });

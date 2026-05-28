@@ -8,8 +8,11 @@ export interface ThreatVerdict {
   asset: string;
   threatLevel: 'CRITICAL' | 'ELEVATED' | 'NOMINAL';
   summary: string;
-  evidence: { title: string; url: string }[];
+  evidence: { title: string; url: string; source: string; publishedAt?: string }[];
   timestamp: string;
+  confidenceScore: number;
+  sourcesChecked: string[];
+  brightDataCallsUsed: number;
 }
 
 /** SSE event emitted during the agentic loop so the UI can show live progress. */
@@ -27,11 +30,28 @@ export type EventEmitter = (event: AgentEvent) => void;
 const SYSTEM_PROMPT = `You are Sentinel Web Oracle, a conservative crypto threat intelligence agent.
 Your job is to detect genuine security threats or regulatory actions against crypto assets.
 Be extremely conservative: a false positive (calling CRITICAL when there is no threat) is BETTER than missing a real attack.
-Only call CRITICAL if you have confirmed evidence from at least one scraped article that describes:
+
+Source Credibility Tiers:
+- Tier 1 (High): PeckShield, SlowMist, CertiKAlert, BlockSecTeam, SEC.gov, CFTC.gov
+- Tier 2 (News): CoinDesk, CoinTelegraph, The Block, Decrypt
+- Tier 3 (Social): Reddit (r/ethfinance, r/DeFi), Twitter/X
+
+Only call CRITICAL if you have confirmed evidence from a Tier 1 or Tier 2 source that describes:
 - A technical exploit, hack, or flash loan attack with specific dollar amounts or transaction hashes
 - An official SEC/regulatory cease-and-desist or enforcement action
 All evidence must be timestamped within the last 4 hours.
-Always return a JSON object with: threatLevel, summary, evidence (array of {title, url}).`;
+
+confidenceScore rubric:
+- 90-100: Multiple verified Tier 1/2 sources, specific tx hashes, < 2h old
+- 70-89: 2+ Tier 2 sources, < 4h old
+- 50-69: Single source or unverified, > 4h old
+- 0-49: Unconfirmed rumors, social media only
+
+Always return a JSON object with:
+- threatLevel: "CRITICAL" | "ELEVATED" | "NOMINAL"
+- summary: string
+- evidence: array of {title, url, source, publishedAt}
+- confidenceScore: number (0-100)`;
 
 const tools: ToolDefinition[] = [
   {
@@ -69,8 +89,24 @@ const tools: ToolDefinition[] = [
   },
 ];
 
-async function runTool(call: ToolCall, emit?: EventEmitter): Promise<string> {
+async function runTool(
+  call: ToolCall,
+  emit?: EventEmitter,
+  metrics?: { calls: number; sources: Set<string> }
+): Promise<string> {
   let result: string;
+
+  if (metrics) {
+    metrics.calls += 1;
+    if (call.input.url) {
+      try {
+        const domain = new URL(call.input.url as string).hostname;
+        metrics.sources.add(domain);
+      } catch (e) {
+        // ignore invalid urls
+      }
+    }
+  }
 
   try {
     if (call.name === 'search_web') {
@@ -108,6 +144,7 @@ export async function runAgentLoop(
   emit?: EventEmitter,
 ): Promise<ThreatVerdict> {
   const llm = getLLMClient();
+  const metrics = { calls: 0, sources: new Set<string>() };
 
   const messages: ConversationMessage[] = [
     {
@@ -134,7 +171,7 @@ Follow this process:
 
     const toolResults = await Promise.all(
       response.toolCalls.map(async (call) => {
-        const result = await runTool(call, emit);
+        const result = await runTool(call, emit, metrics);
         return { tool_use_id: call.id, content: result };
       }),
     );
@@ -157,6 +194,9 @@ Follow this process:
       summary: 'Agent completed analysis but returned no structured verdict.',
       evidence: [],
       timestamp: new Date().toISOString(),
+      confidenceScore: 0,
+      sourcesChecked: Array.from(metrics.sources),
+      brightDataCallsUsed: metrics.calls,
     };
   }
 
@@ -167,5 +207,8 @@ Follow this process:
     summary: parsed.summary || '',
     evidence: parsed.evidence || [],
     timestamp: new Date().toISOString(),
+    confidenceScore: parsed.confidenceScore || 0,
+    sourcesChecked: Array.from(metrics.sources),
+    brightDataCallsUsed: metrics.calls,
   };
 }

@@ -187,6 +187,7 @@
     .verdict-card.NOMINAL  { background: var(--nominal-bg);  border-color: var(--nominal); }
 
     .verdict-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .verdict-metrics { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 11px; color: var(--muted); }
     .threat-badge {
       font-size: 11px;
       font-weight: 700;
@@ -361,6 +362,7 @@
             <span class="risk-action" id="riskAction"></span>
             <span class="verdict-asset" id="verdictAsset"></span>
           </div>
+          <div class="verdict-metrics" id="verdictMetrics"></div>
           <div class="verdict-summary" id="verdictSummary"></div>
           <div class="verdict-reason" id="verdictReason"></div>
           <div class="evidence-list" id="evidenceList"></div>
@@ -466,6 +468,13 @@
     document.getElementById('riskAction').textContent = `⚡ ${v.riskAction}`;
     document.getElementById('riskAction').className = `risk-action ${v.riskAction}`;
     document.getElementById('verdictAsset').textContent = v.asset;
+
+    document.getElementById('verdictMetrics').innerHTML = `
+      <span>Confidence: <strong>${v.confidenceScore}%</strong></span>
+      <span>·</span>
+      <span>Bright Data Calls: <strong>${v.brightDataCallsUsed}</strong></span>
+    `;
+
     document.getElementById('verdictSummary').textContent = v.summary;
     document.getElementById('verdictReason').textContent = v.riskReason;
     document.getElementById('verdictTs').textContent = `Analysis completed: ${new Date(v.timestamp).toLocaleString()}`;
