@@ -1,176 +1,197 @@
 # 🛡️ Sentinel Web Oracle
 
-> **Agentic threat intelligence for crypto — powered by live web data.**  
-> Built for the [Web Data UNLOCKED Hackathon](https://lablab.ai) · Track: **Security & Compliance**
+> **Autonomous crypto threat intelligence — powered by Bright Data's live web infrastructure.**
+
+[![Track](https://img.shields.io/badge/Track-Security%20%26%20Compliance-blue)](https://lablab.ai)
+[![Bright Data](https://img.shields.io/badge/Bright%20Data-SERP%20%7C%20Unlocker%20%7C%20Browser%20%7C%20MCP-orange)](https://brightdata.com)
+[![LLM](https://img.shields.io/badge/LLM-Groq%20llama--3.3--70b-green)](https://groq.com)
+[![Built with Kiro](https://img.shields.io/badge/Built%20with-Kiro-purple)](https://kiro.dev)
 
 ---
 
-## 🧠 What It Does
+## The Problem
 
-Sentinel Web Oracle is an autonomous AI agent that monitors the open web in real time to detect critical crypto threats before they cause damage — exploits, flash loan attacks, regulatory black swans, and more.
+DeFi protocols, crypto funds, and compliance teams have no reliable way to monitor the open web for threats in real time. By the time a flash loan exploit or SEC enforcement action appears in a data feed, the damage is already done.
 
-It doesn't just search. It **reasons**. Using a multi-step agentic loop, it:
-
-1. **Disambiguates** the asset to avoid false signals
-2. **Fires parallel searches** across multiple risk vectors
-3. **Scrapes and reads full articles** to verify headlines
-4. **Synthesizes a final verdict** with evidence links — no hallucinated receipts
-
-If a confirmed exploit or regulatory cease-and-desist is found under 4 hours old, the agent returns `threatLevel: "CRITICAL"` and downstream risk systems respond automatically.
+The web has the signal — but it's behind bot detection, JavaScript rendering, and geo-blocks that no internal SIEM was built to handle.
 
 ---
 
-## 🏗️ Architecture
+## What It Does
+
+Sentinel Web Oracle is an autonomous AI agent that monitors the open web for crypto-specific risk signals. Given any asset, it:
 
 ```
-sentinel-web-oracle/
-├── src/
-│   ├── tools/
-│   │   ├── searchWeb.ts          # SERP API — headline discovery
-│   │   ├── scrapeUrl.ts          # Web Unlocker — full article extraction
-│   │   └── browserScrape.ts      # Scraping Browser — JS-heavy sites (Twitter/X, TradingView)
-│   ├── logic/
-│   │   ├── agentLoop.ts          # Core tool-use reasoning loop (Claude / GPT-4o)
-│   │   ├── synthesizer.ts        # Final verdict + evidence assembly
-│   │   ├── clients/
-│   │   │   └── web_oracle_client.ts   # Client connector (port 3008)
-│   │   └── strategy/
-│   │       └── risk_assessment.ts     # HOLD trigger on CRITICAL threat
-│   ├── config/
-│   │   └── zones.ts              # Bright Data zone configuration
-│   └── index.ts                  # MCP Server entrypoint (port 3008)
-├── docs/
-│   └── architecture.md
-├── .env.example
-├── package.json
-└── README.md
+1. Disambiguates  →  Confirms canonical name + primary sources via SERP API
+2. Multi-search   →  Parallel queries: exploit news, SEC enforcement, flash loans
+3. Deep scrape    →  Reads full articles via Web Unlocker + Scraping Browser
+4. Synthesizes    →  Returns CRITICAL / ELEVATED / NOMINAL + HOLD / MONITOR / CLEAR
+```
+
+Every call is a fresh live-web search. No stale cache. No hallucinated receipts.
+
+---
+
+## Live Demo
+
+```bash
+git clone https://github.com/TheVertexAgents/sentinel-web-oracle
+cd sentinel-web-oracle
+cp .env.example .env   # add your keys
+npm install
+npm run dev            # → http://localhost:3008
+```
+
+**Dashboard:** `http://localhost:3008`
+**API:** `POST http://localhost:3008/analyze`
+**SSE stream:** `GET http://localhost:3008/stream?asset=ETH`
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Sentinel Web Oracle                       │
+│                                                             │
+│  ┌──────────┐   ┌──────────────┐   ┌────────────────────┐  │
+│  │  Web UI  │   │  REST API    │   │   MCP Server       │  │
+│  │ (port    │   │  /analyze    │   │  analyze_crypto_   │  │
+│  │  3008)   │   │  /stream SSE │   │  threat()          │  │
+│  └────┬─────┘   └──────┬───────┘   └─────────┬──────────┘  │
+│       └────────────────┴─────────────────────┘             │
+│                         │                                   │
+│              ┌──────────▼──────────┐                        │
+│              │   Agentic Loop      │                        │
+│              │  (Groq / Anthropic) │                        │
+│              └──────────┬──────────┘                        │
+│                         │                                   │
+│         ┌───────────────┼───────────────┐                   │
+│         ▼               ▼               ▼                   │
+│   search_web       scrape_url    browser_scrape             │
+│   SERP API         Web Unlocker  Scraping Browser           │
+│   (headlines)      (articles)    (Twitter/Reddit)           │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## ⚡ Bright Data Infrastructure
+## Bright Data Infrastructure
 
 | Tool | Zone | Purpose |
 |---|---|---|
-| **SERP API** | `serp_api1` | High-level headline discovery (JSON) |
-| **Web Unlocker** | `web_unlocker1` | Scraping news archives & blogs (RAW) |
-| **Scraping Browser** | `scraping_browser1` | JS-heavy sites: Twitter/X, TradingView |
+| **SERP API** | `serp_api1` | Structured Google search — headline discovery |
+| **Web Unlocker** | `web_unlocker1` | Full article extraction — bypasses bot detection |
+| **Scraping Browser** | `scraping_browser1` | JS-heavy sources: Twitter/X, Reddit, TradingView |
+| **MCP Server** | — | Direct agent-to-agent integration |
 
 ---
 
-## 🤖 The Agentic Loop
+## API Reference
 
-```
-User Query: "Is [ASSET] under threat?"
-        │
-        ▼
-┌─────────────────────────┐
-│  Step 1: Disambiguation  │  → Confirm canonical asset name & sources
-└────────────┬────────────┘
-             ▼
-┌─────────────────────────┐
-│  Step 2: Multi-Angle    │  → Parallel searches:
-│  Discovery              │    · "[ASSET] exploit news last 24h"
-│                         │    · "[ASSET] SEC enforcement"
-│                         │    · "[ASSET] flash loan attack"
-└────────────┬────────────┘
-             ▼
-┌─────────────────────────┐
-│  Step 3: Deep Scrape &  │  → Full article extraction per headline
-│  Verification           │    via Web Unlocker / Scraping Browser
-└────────────┬────────────┘
-             ▼
-┌─────────────────────────┐
-│  Step 4: Synthesis      │  → Verdict + evidence[] with source URLs
-│  & Verdict              │    threatLevel: "CRITICAL" | "ELEVATED" | "NOMINAL"
-└─────────────────────────┘
-```
-
----
-
-## 🚀 Quick Start
-
-### 1. Clone & install
-
-```bash
-git clone https://github.com/<your-username>/sentinel-web-oracle.git
-cd sentinel-web-oracle
-npm install
-```
-
-### 2. Configure environment
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env`:
-
-```env
-BRIGHTDATA_API_KEY=your_api_key_here
-SERP_ZONE=serp_api1
-UNLOCKER_ZONE=web_unlocker1
-BROWSER_ZONE=scraping_browser1
-ANTHROPIC_API_KEY=your_anthropic_key_here   # or OPENAI_API_KEY for GPT-4o
-PORT=3008
-```
-
-### 3. Run the Oracle server
-
-```bash
-npm run dev
-```
-
-Server starts on **port 3008**.
-
-### 4. Query the Oracle
-
+### `POST /analyze`
 ```bash
 curl -X POST http://localhost:3008/analyze \
   -H "Content-Type: application/json" \
-  -d '{"asset": "Uniswap"}'
+  -d '{"asset": "ETH"}'
 ```
-
-**Example response:**
 
 ```json
 {
-  "asset": "Uniswap",
+  "asset": "ETH",
   "threatLevel": "CRITICAL",
-  "summary": "A flash loan exploit targeting Uniswap V3 pools was reported 2 hours ago across three verified sources.",
+  "summary": "Flash loan exploit targeting ETH-based DeFi protocol confirmed.",
   "evidence": [
-    { "title": "Uniswap V3 Flash Loan Attack — $4.2M drained", "url": "https://..." },
-    { "title": "Certik Alert: Uniswap exploit confirmed", "url": "https://..." }
+    { "title": "ETH exploit drains $4.2M from protocol", "url": "https://..." }
   ],
-  "timestamp": "2026-05-28T10:42:00Z"
+  "timestamp": "2026-05-28T10:42:00Z",
+  "riskAction": "HOLD",
+  "riskReason": "Critical threat detected. Immediate halt recommended."
 }
+```
+
+### `GET /stream?asset=ETH`
+Server-Sent Events stream. Emits events as the agent works:
+```
+data: {"type":"tool_call","tool":"search_web","input":{"query":"ETH exploit news last 24h"}}
+data: {"type":"tool_result","tool":"search_web","result":"[{\"title\":\"..."}]"}
+data: {"type":"tool_call","tool":"scrape_url","input":{"url":"https://coindesk.com/..."}}
+data: {"type":"verdict","verdict":{"threatLevel":"CRITICAL","riskAction":"HOLD",...}}
 ```
 
 ---
 
-## 🔗 Integration with Vertex Sentinel
+## MCP Integration
 
-Sentinel Web Oracle is designed to integrate with the **Vertex Sentinel** risk management system:
+Add to your Claude Desktop / Cursor `mcp.json`:
 
-- **Oracle** runs on port `3008`
-- **Dashboard** runs on port `3005`
-- **Socket Server** runs on port `3006`
-- `risk_assessment.ts` triggers a `HOLD` automatically when `threatLevel === "CRITICAL"`
+```json
+{
+  "mcpServers": {
+    "sentinel-web-oracle": {
+      "command": "npx",
+      "args": ["ts-node", "/path/to/sentinel-web-oracle/src/mcp/server.ts"],
+      "env": {
+        "BRIGHTDATA_API_KEY": "your_key",
+        "SERP_ZONE": "serp_api1",
+        "UNLOCKER_ZONE": "web_unlocker1",
+        "AI_PROVIDER": "groq",
+        "GROQ_API_KEY": "your_key"
+      }
+    }
+  }
+}
+```
+
+**Available MCP tools:**
+- `analyze_crypto_threat(asset)` — full 4-step analysis
+- `batch_threat_scan(assets[])` — parallel scan of up to 5 assets
 
 ---
 
-## 🏆 Hackathon Context
+## Environment Variables
 
-**Event**: [Web Data UNLOCKED — Bright Data AI Agents Hackathon](https://lablab.ai)  
-**Dates**: May 25–31, 2026  
-**Track**: Security & Compliance  
-**Team**: NullSentinel  
-**Builder**: Solo participant  
-
-**Bright Data tools used**: SERP API · Web Unlocker · Scraping Browser · MCP Server
+```env
+BRIGHTDATA_API_KEY=       # Bright Data API key
+SERP_ZONE=serp_api1       # SERP API zone name
+UNLOCKER_ZONE=web_unlocker1
+BROWSER_ZONE=scraping_browser1
+AI_PROVIDER=groq          # groq | anthropic
+AI_MODEL=llama-3.3-70b-versatile
+GROQ_API_KEY=             # Free at console.groq.com
+ANTHROPIC_API_KEY=        # Optional — only if AI_PROVIDER=anthropic
+PORT=3008
+```
 
 ---
 
-## 📄 License
+## Risk Decision Matrix
 
-MIT — built for the Web Data UNLOCKED Hackathon 2026.
+| Threat Level | Risk Action | Meaning |
+|---|---|---|
+| `CRITICAL` | `HOLD` | Confirmed exploit or SEC action — halt exposure immediately |
+| `ELEVATED` | `MONITOR` | Suspicious signals — watch closely, reduce position |
+| `NOMINAL` | `CLEAR` | No significant threats detected |
+
+The agent is **conservative by design**: a false positive is better than a missed real attack.
+
+---
+
+## Built With Kiro
+
+This project was built end-to-end using **[Kiro](https://kiro.dev)** — the AI-powered development platform by AWS. Kiro was used to scaffold the architecture, implement the LLM abstraction layer, debug Bright Data API integrations, build the SSE streaming endpoint, and wire the MCP server — all through natural language iteration.
+
+---
+
+## Hackathon
+
+**Event:** [Web Data UNLOCKED — Bright Data AI Agents Hackathon](https://lablab.ai)
+**Dates:** May 25–31, 2026
+**Track:** Security & Compliance
+**Team:** NullSentinel
+
+---
+
+## License
+
+MIT

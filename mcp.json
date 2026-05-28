@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "sentinel-web-oracle": {
+      "command": "npx",
+      "args": ["ts-node", "/home/asif1/hackathons/sentinel-web-oracle/src/mcp/server.ts"],
+      "env": {
+        "BRIGHTDATA_API_KEY": "YOUR_BRIGHTDATA_API_KEY",
+        "SERP_ZONE": "serp_api1",
+        "UNLOCKER_ZONE": "web_unlocker1",
+        "BROWSER_ZONE": "scraping_browser1",
+        "AI_PROVIDER": "groq",
+        "AI_MODEL": "llama-3.3-70b-versatile",
+        "GROQ_API_KEY": "YOUR_GROQ_API_KEY"
+      },
+      "disabled": false,
+      "autoApprove": ["analyze_crypto_threat", "batch_threat_scan"]
+    }
+  }
+}
