@@ -99,6 +99,23 @@ export async function getHistory(asset: string, hoursBack: number): Promise<Verd
   });
 }
 
+/** Get the latest verdict for each asset seen in the last 24 hours */
+export async function getLatestUniqueSignals(): Promise<VerdictRecord[]> {
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  return new Promise((resolve, reject) => {
+    db.all(
+      `SELECT * FROM verdicts
+       WHERE id IN (SELECT MAX(id) FROM verdicts WHERE timestamp >= ? GROUP BY asset)
+       ORDER BY timestamp DESC`,
+      [cutoff],
+      (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows as VerdictRecord[]);
+      }
+    );
+  });
+}
+
 export interface MonitorRecord {
   id: string;
   assets: string; // JSON string array
