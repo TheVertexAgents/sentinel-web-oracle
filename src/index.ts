@@ -5,7 +5,7 @@ import { runAgentLoop } from './logic/agentLoop';
 import { assessRisk } from './logic/strategy/risk_assessment';
 import { config } from './config/zones';
 import type { AgentEvent } from './logic/agentLoop';
-import { initDb } from './logic/db';
+import { initDb, getHistory, getLatestUniqueSignals } from './logic/db';
 import { initMonitoring, runAnalyisAndTrack } from './logic/monitoring';
 
 dotenv.config();
@@ -19,6 +19,27 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 // ── Health ────────────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', service: 'sentinel-web-oracle', port: config.server.port });
+});
+
+app.get('/api/history', async (req, res) => {
+  const asset = req.query.asset as string;
+  const hours = parseInt(req.query.hours as string || '24');
+  if (!asset) return res.status(400).json({ error: 'Missing asset' });
+  try {
+    const history = await getHistory(asset, hours);
+    res.json(history);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/latest-signals', async (_req, res) => {
+  try {
+    const signals = await getLatestUniqueSignals();
+    res.json(signals);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ── Standard JSON endpoint (existing) ────────────────────────────────────────
