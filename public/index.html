@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sentinel Web Oracle</title>
+  <style>
+    :root {
+      --bg: #0a0e1a;
+      --surface: #111827;
+      --surface2: #1a2235;
+      --border: #1e2d45;
+      --accent: #3b82f6;
+      --accent-glow: rgba(59,130,246,0.15);
+      --critical: #ef4444;
+      --critical-bg: rgba(239,68,68,0.1);
+      --elevated: #f59e0b;
+      --elevated-bg: rgba(245,158,11,0.1);
+      --nominal: #22c55e;
+      --nominal-bg: rgba(34,197,94,0.1);
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--surface);
+    }
+    header .logo { font-size: 22px; }
+    header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+    header .subtitle { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    header .badge {
+      margin-left: auto;
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    header .badge span { color: var(--nominal); font-weight: 600; }
+
+    /* ── Main layout ── */
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 0;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 32px 24px;
+      gap: 24px;
+    }
+
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; }
+    }
+
+    /* ── Panel ── */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .panel-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .panel-body { padding: 20px; }
+
+    /* ── Input form ── */
+    .input-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+    label { font-size: 12px; color: var(--muted); font-weight: 500; }
+
+    .asset-input-row { display: flex; gap: 8px; }
+
+    input[type="text"] {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]:focus { border-color: var(--accent); }
+    input[type="text"]::placeholder { color: var(--muted); font-weight: 400; }
+
+    button.analyze-btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      white-space: nowrap;
+    }
+    button.analyze-btn:hover { opacity: 0.9; }
+    button.analyze-btn:active { transform: scale(0.98); }
+    button.analyze-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── Quick picks ── */
+    .quick-picks { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
+    .quick-pick {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text);
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .quick-pick:hover { border-color: var(--accent); background: var(--accent-glow); }
+
+    /* ── Status indicator ── */
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: var(--surface2);
+      font-size: 13px;
+      min-height: 42px;
+    }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+      flex-shrink: 0;
+    }
+    .status-dot.pulse {
+      background: var(--accent);
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.3); }
+    }
+
+    /* ── Verdict card ── */
+    .verdict-card {
+      border-radius: 10px;
+      padding: 18px;
+      margin-top: 16px;
+      border: 1px solid var(--border);
+      display: none;
+    }
+    .verdict-card.show { display: block; }
+    .verdict-card.CRITICAL { background: var(--critical-bg); border-color: var(--critical); }
+    .verdict-card.ELEVATED { background: var(--elevated-bg); border-color: var(--elevated); }
+    .verdict-card.NOMINAL  { background: var(--nominal-bg);  border-color: var(--nominal); }
+
+    .verdict-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .threat-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+    }
+    .CRITICAL .threat-badge { background: var(--critical); color: #fff; }
+    .ELEVATED .threat-badge { background: var(--elevated); color: #000; }
+    .NOMINAL  .threat-badge { background: var(--nominal);  color: #000; }
+
+    .risk-action {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+      border: 1px solid currentColor;
+    }
+    .risk-action.HOLD    { color: var(--critical); }
+    .risk-action.MONITOR { color: var(--elevated); }
+    .risk-action.CLEAR   { color: var(--nominal); }
+
+    .verdict-asset { font-size: 18px; font-weight: 700; }
+    .verdict-summary { font-size: 13px; color: var(--text); line-height: 1.5; margin-bottom: 12px; }
+    .verdict-reason { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+
+    .evidence-list { display: flex; flex-direction: column; gap: 6px; }
+    .evidence-item {
+      background: rgba(255,255,255,0.04);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 12px;
+    }
+    .evidence-item a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .evidence-item a:hover { text-decoration: underline; }
+
+    .verdict-ts { font-size: 11px; color: var(--muted); margin-top: 10px; }
+
+    /* ── Activity log (right panel) ── */
+    .log-container {
+      height: 100%;
+      min-height: 500px;
+      display: flex;
+      flex-direction: column;
+    }
+    .log-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .log-scroll::-webkit-scrollbar { width: 4px; }
+    .log-scroll::-webkit-scrollbar-track { background: transparent; }
+    .log-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .log-entry {
+      display: flex;
+      gap: 10px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      animation: fadeIn 0.2s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+    .log-entry.tool_call  { background: rgba(59,130,246,0.08); }
+    .log-entry.tool_result { background: rgba(255,255,255,0.03); }
+    .log-entry.verdict    { background: rgba(34,197,94,0.08); }
+    .log-entry.error      { background: rgba(239,68,68,0.08); }
+    .log-entry.system     { background: transparent; }
+
+    .log-icon { flex-shrink: 0; width: 16px; text-align: center; }
+    .log-time { color: var(--muted); flex-shrink: 0; }
+    .log-text { flex: 1; word-break: break-all; }
+    .log-text .tool-name { color: var(--accent); font-weight: 600; }
+    .log-text .tool-input { color: #94a3b8; }
+    .log-text .result-preview { color: #64748b; }
+    .log-text .verdict-text { color: var(--nominal); font-weight: 600; }
+    .log-text .error-text { color: var(--critical); }
+
+    .empty-log {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      gap: 8px;
+      font-family: var(--mono);
+    }
+    .empty-log .big-icon { font-size: 40px; opacity: 0.3; }
+
+    /* ── Bright Data badge ── */
+    .bd-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--muted);
+      padding: 10px 20px;
+      border-top: 1px solid var(--border);
+    }
+    .bd-badge strong { color: var(--text); }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 12px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--muted);
+      background: var(--surface);
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <span class="logo">🛡️</span>
+  <div>
+    <h1>Sentinel Web Oracle</h1>
+    <div class="subtitle">Live crypto threat intelligence · Powered by Bright Data</div>
+  </div>
+  <div class="badge">Track: <span>Security &amp; Compliance</span></div>
+</header>
+
+<main>
+  <!-- Left: Input + Verdict -->
+  <div style="display:flex;flex-direction:column;gap:16px;">
+
+    <div class="panel">
+      <div class="panel-header">🔍 Threat Analysis</div>
+      <div class="panel-body">
+
+        <div class="input-group">
+          <label>CRYPTO ASSET</label>
+          <div class="asset-input-row">
+            <input type="text" id="assetInput" placeholder="BTC, ETH, SOL…" maxlength="20" />
+            <button class="analyze-btn" id="analyzeBtn" onclick="startAnalysis()">Analyze</button>
+          </div>
+        </div>
+
+        <div class="quick-picks">
+          <span class="quick-pick" onclick="setAsset('BTC')">BTC</span>
+          <span class="quick-pick" onclick="setAsset('ETH')">ETH</span>
+          <span class="quick-pick" onclick="setAsset('SOL')">SOL</span>
+          <span class="quick-pick" onclick="setAsset('USDC')">USDC</span>
+          <span class="quick-pick" onclick="setAsset('Uniswap')">UNI</span>
+          <span class="quick-pick" onclick="setAsset('Aave')">AAVE</span>
+        </div>
+
+        <div class="status-row" id="statusRow">
+          <div class="status-dot" id="statusDot"></div>
+          <span id="statusText">Enter an asset to begin analysis</span>
+        </div>
+
+        <div class="verdict-card" id="verdictCard">
+          <div class="verdict-header">
+            <span class="threat-badge" id="threatBadge"></span>
+            <span class="risk-action" id="riskAction"></span>
+            <span class="verdict-asset" id="verdictAsset"></span>
+          </div>
+          <div class="verdict-summary" id="verdictSummary"></div>
+          <div class="verdict-reason" id="verdictReason"></div>
+          <div class="evidence-list" id="evidenceList"></div>
+          <div class="verdict-ts" id="verdictTs"></div>
+        </div>
+
+      </div>
+
+      <div class="bd-badge">
+        <span>⚡</span>
+        <span>Powered by <strong>Bright Data</strong> SERP API · Web Unlocker · Scraping Browser</span>
+      </div>
+    </div>
+
+    <!-- How it works -->
+    <div class="panel">
+      <div class="panel-header">⚙️ How It Works</div>
+      <div class="panel-body" style="display:flex;flex-direction:column;gap:10px;font-size:13px;color:#94a3b8;line-height:1.6;">
+        <div><strong style="color:#e2e8f0;">Step 1 — Disambiguate</strong><br>Confirms the canonical asset name and primary news sources via Bright Data SERP API.</div>
+        <div><strong style="color:#e2e8f0;">Step 2 — Multi-angle search</strong><br>Fires parallel searches: exploit news, SEC enforcement, flash loan attacks — all within the last 24h.</div>
+        <div><strong style="color:#e2e8f0;">Step 3 — Deep scrape &amp; verify</strong><br>Reads full article text via Web Unlocker. Uses Scraping Browser for JS-heavy sources (Twitter/X, Reddit).</div>
+        <div><strong style="color:#e2e8f0;">Step 4 — Synthesize verdict</strong><br>Returns CRITICAL / ELEVATED / NOMINAL with cited evidence. CRITICAL triggers an automatic HOLD signal.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Right: Live activity log -->
+  <div class="panel" style="display:flex;flex-direction:column;">
+    <div class="panel-header">📡 Live Agent Activity</div>
+    <div class="log-container">
+      <div class="log-scroll" id="logScroll">
+        <div class="empty-log" id="emptyLog">
+          <div class="big-icon">🔭</div>
+          <div>Waiting for analysis…</div>
+          <div style="font-size:11px;opacity:0.6;">Tool calls will appear here in real time</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <span>Sentinel Web Oracle · Web Data UNLOCKED Hackathon 2026</span>
+  <span>
+    <a href="https://github.com/TheVertexAgents/sentinel-web-oracle" target="_blank">GitHub</a>
+    &nbsp;·&nbsp;
+    <a href="/health" target="_blank">Health</a>
+  </span>
+</footer>
+
+<script>
+  let currentSSE = null;
+  let logEntries = [];
+
+  function setAsset(ticker) {
+    document.getElementById('assetInput').value = ticker;
+    document.getElementById('assetInput').focus();
+  }
+
+  function ts() {
+    return new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+
+  function addLog(type, icon, html) {
+    const emptyLog = document.getElementById('emptyLog');
+    if (emptyLog) emptyLog.remove();
+
+    const scroll = document.getElementById('logScroll');
+    const entry = document.createElement('div');
+    entry.className = `log-entry ${type}`;
+    entry.innerHTML = `
+      <span class="log-icon">${icon}</span>
+      <span class="log-time">${ts()}</span>
+      <span class="log-text">${html}</span>
+    `;
+    scroll.appendChild(entry);
+    scroll.scrollTop = scroll.scrollHeight;
+  }
+
+  function clearLog() {
+    const scroll = document.getElementById('logScroll');
+    scroll.innerHTML = `
+      <div class="empty-log" id="emptyLog">
+        <div class="big-icon">🔭</div>
+        <div>Waiting for analysis…</div>
+        <div style="font-size:11px;opacity:0.6;">Tool calls will appear here in real time</div>
+      </div>
+    `;
+  }
+
+  function setStatus(text, pulsing) {
+    document.getElementById('statusText').textContent = text;
+    const dot = document.getElementById('statusDot');
+    dot.className = 'status-dot' + (pulsing ? ' pulse' : '');
+  }
+
+  function showVerdict(v) {
+    const card = document.getElementById('verdictCard');
+    card.className = `verdict-card show ${v.threatLevel}`;
+
+    document.getElementById('threatBadge').textContent = v.threatLevel;
+    document.getElementById('riskAction').textContent = `⚡ ${v.riskAction}`;
+    document.getElementById('riskAction').className = `risk-action ${v.riskAction}`;
+    document.getElementById('verdictAsset').textContent = v.asset;
+    document.getElementById('verdictSummary').textContent = v.summary;
+    document.getElementById('verdictReason').textContent = v.riskReason;
+    document.getElementById('verdictTs').textContent = `Analysis completed: ${new Date(v.timestamp).toLocaleString()}`;
+
+    const evidenceList = document.getElementById('evidenceList');
+    evidenceList.innerHTML = '';
+    if (v.evidence && v.evidence.length > 0) {
+      v.evidence.forEach(e => {
+        const item = document.createElement('div');
+        item.className = 'evidence-item';
+        item.innerHTML = `📎 <a href="${e.url}" target="_blank" rel="noopener">${e.title}</a>`;
+        evidenceList.appendChild(item);
+      });
+    }
+  }
+
+  function startAnalysis() {
+    const asset = document.getElementById('assetInput').value.trim().toUpperCase();
+    if (!asset) {
+      document.getElementById('assetInput').focus();
+      return;
+    }
+
+    // Cancel any existing stream
+    if (currentSSE) {
+      currentSSE.close();
+      currentSSE = null;
+    }
+
+    // Reset UI
+    clearLog();
+    document.getElementById('verdictCard').className = 'verdict-card';
+    document.getElementById('analyzeBtn').disabled = true;
+    setStatus(`Analyzing ${asset}…`, true);
+
+    addLog('system', '🚀', `Starting threat analysis for <strong>${asset}</strong>`);
+
+    const url = `/stream?asset=${encodeURIComponent(asset)}`;
+    const sse = new EventSource(url);
+    currentSSE = sse;
+
+    sse.onmessage = (e) => {
+      let event;
+      try { event = JSON.parse(e.data); } catch { return; }
+
+      if (event.type === 'tool_call') {
+        const toolIcons = { search_web: '🔍', scrape_url: '🌐', browser_scrape: '🖥️' };
+        const icon = toolIcons[event.tool] || '🔧';
+        const inputStr = event.input ? Object.values(event.input)[0] : '';
+        addLog('tool_call', icon,
+          `<span class="tool-name">${event.tool}</span> <span class="tool-input">"${inputStr}"</span>`
+        );
+        setStatus(`${event.tool}: "${inputStr}"`, true);
+
+      } else if (event.type === 'tool_result') {
+        addLog('tool_result', '✅',
+          `<span class="result-preview">${event.result || '(empty)'}</span>`
+        );
+
+      } else if (event.type === 'verdict') {
+        const v = event.verdict;
+        const levelEmoji = { CRITICAL: '🚨', ELEVATED: '⚠️', NOMINAL: '✅' };
+        addLog('verdict', levelEmoji[v.threatLevel] || '📊',
+          `<span class="verdict-text">${v.threatLevel} → ${v.riskAction}</span> — ${v.summary}`
+        );
+        showVerdict(v);
+        setStatus(`Analysis complete: ${v.threatLevel}`, false);
+        document.getElementById('analyzeBtn').disabled = false;
+        sse.close();
+
+      } else if (event.type === 'error') {
+        addLog('error', '❌', `<span class="error-text">${event.message}</span>`);
+        setStatus('Analysis failed', false);
+        document.getElementById('analyzeBtn').disabled = false;
+        sse.close();
+      }
+    };
+
+    sse.onerror = () => {
+      addLog('error', '❌', '<span class="error-text">Connection lost</span>');
+      setStatus('Connection error', false);
+      document.getElementById('analyzeBtn').disabled = false;
+      sse.close();
+    };
+  }
+
+  // Allow Enter key to trigger analysis
+  document.getElementById('assetInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') startAnalysis();
+  });
+</script>
+
+</body>
+</html>

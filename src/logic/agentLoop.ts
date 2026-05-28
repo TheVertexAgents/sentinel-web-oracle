@@ -1,5 +1,6 @@
 import { searchWeb, SearchResult } from '../tools/searchWeb';
 import { scrapeUrl } from '../tools/scrapeUrl';
+import { browserScrape } from '../tools/browserScrape';
 import { getLLMClient } from './llm/factory';
 import type { ToolDefinition, ConversationMessage, ToolCall } from './llm/types';
 
@@ -10,6 +11,18 @@ export interface ThreatVerdict {
   evidence: { title: string; url: string }[];
   timestamp: string;
 }
+
+/** SSE event emitted during the agentic loop so the UI can show live progress. */
+export interface AgentEvent {
+  type: 'tool_call' | 'tool_result' | 'verdict' | 'error';
+  tool?: string;
+  input?: Record<string, unknown>;
+  result?: string;
+  verdict?: ThreatVerdict & { riskAction: string; riskReason: string };
+  message?: string;
+}
+
+export type EventEmitter = (event: AgentEvent) => void;
 
 const SYSTEM_PROMPT = `You are Sentinel Web Oracle, a conservative crypto threat intelligence agent.
 Your job is to detect genuine security threats or regulatory actions against crypto assets.
@@ -34,7 +47,7 @@ const tools: ToolDefinition[] = [
   },
   {
     name: 'scrape_url',
-    description: 'Scrape the full text of an article URL using Bright Data Web Unlocker.',
+    description: 'Scrape the full text of an article URL using Bright Data Web Unlocker. Best for standard news sites.',
     input_schema: {
       type: 'object',
       properties: {
@@ -43,20 +56,57 @@ const tools: ToolDefinition[] = [
       required: ['url'],
     },
   },
+  {
+    name: 'browser_scrape',
+    description: 'Scrape a JavaScript-heavy page using Bright Data Scraping Browser. Only use this for Twitter/X (twitter.com or x.com), Reddit (reddit.com), or TradingView URLs that require JavaScript rendering. For all other URLs use scrape_url instead.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'Full URL of the JS-heavy page to scrape (must be twitter.com, x.com, reddit.com, or tradingview.com)' },
+      },
+      required: ['url'],
+    },
+  },
 ];
 
-async function runTool(call: ToolCall): Promise<string> {
-  if (call.name === 'search_web') {
-    const results: SearchResult[] = await searchWeb(call.input.query as string);
-    return JSON.stringify(results);
+async function runTool(call: ToolCall, emit?: EventEmitter): Promise<string> {
+  let result: string;
+
+  try {
+    if (call.name === 'search_web') {
+      const results: SearchResult[] = await searchWeb(call.input.query as string);
+      result = JSON.stringify(results);
+    } else if (call.name === 'scrape_url') {
+      result = await scrapeUrl(call.input.url as string);
+    } else if (call.name === 'browser_scrape') {
+      // Fallback to web unlocker if browser zone not configured
+      try {
+        result = await browserScrape(call.input.url as string);
+      } catch {
+        result = await scrapeUrl(call.input.url as string);
+      }
+    } else {
+      result = 'Unknown tool';
+    }
+  } catch (err: any) {
+    result = `Tool error: ${err.message}`;
   }
-  if (call.name === 'scrape_url') {
-    return scrapeUrl(call.input.url as string);
+
+  if (emit) {
+    emit({
+      type: 'tool_result',
+      tool: call.name,
+      result: result.substring(0, 300) + (result.length > 300 ? '…' : ''),
+    });
   }
-  return 'Unknown tool';
+
+  return result;
 }
 
-export async function runAgentLoop(asset: string): Promise<ThreatVerdict> {
+export async function runAgentLoop(
+  asset: string,
+  emit?: EventEmitter,
+): Promise<ThreatVerdict> {
   const llm = getLLMClient();
 
   const messages: ConversationMessage[] = [
@@ -66,24 +116,29 @@ export async function runAgentLoop(asset: string): Promise<ThreatVerdict> {
 Follow this process:
 1. First search to confirm the asset's canonical name and primary news sources.
 2. Then run parallel searches for: "${asset} exploit news last 24h", "${asset} SEC enforcement", "${asset} flash loan attack".
-3. For any suspicious headlines, scrape the full article to verify.
+3. For any suspicious headlines, scrape the full article to verify. Use browser_scrape for Twitter/X or Reddit links.
 4. Return your final JSON verdict.`,
     },
   ];
 
   let response = await llm.chat(SYSTEM_PROMPT, messages, tools);
 
-  // Agentic loop — keep running until the model stops requesting tools
   while (response.stopReason === 'tool_use' && response.toolCalls.length > 0) {
+    // Emit tool_call events before executing
+    for (const call of response.toolCalls) {
+      console.log(`[Agent] Calling tool: ${call.name}`, call.input);
+      if (emit) {
+        emit({ type: 'tool_call', tool: call.name, input: call.input });
+      }
+    }
+
     const toolResults = await Promise.all(
       response.toolCalls.map(async (call) => {
-        console.log(`[Agent] Calling tool: ${call.name}`, call.input);
-        const result = await runTool(call);
+        const result = await runTool(call, emit);
         return { tool_use_id: call.id, content: result };
       }),
     );
 
-    // Append assistant turn (with tool calls) and tool results
     messages.push({
       role: 'assistant',
       toolCalls: response.toolCalls,
@@ -94,7 +149,6 @@ Follow this process:
     response = await llm.chat(SYSTEM_PROMPT, messages, tools);
   }
 
-  // Extract final JSON verdict from the last text response
   const jsonMatch = response.text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
     return {
