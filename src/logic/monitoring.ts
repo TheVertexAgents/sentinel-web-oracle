@@ -20,6 +20,8 @@ function broadcastToFeed(event: AgentEvent) {
 }
 
 const activeMonitors: Map<string, NodeJS.Timeout> = new Map();
+const analysisCache: Map<string, { verdict: any; expiresAt: number }> = new Map();
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 export async function startMonitoring(
   assets: string[],
@@ -125,7 +127,22 @@ export async function initMonitoring() {
 }
 
 /** Wrapper for analyze_crypto_threat to ensure feed broadcasting and history saving */
-export async function runAnalyisAndTrack(asset: string, emit?: (event: AgentEvent) => void): Promise<ThreatVerdict & { riskAction: string; riskReason: string }> {
+export async function runAnalyisAndTrack(
+  asset: string,
+  emit?: (event: AgentEvent) => void,
+  useCache = true
+): Promise<ThreatVerdict & { riskAction: string; riskReason: string }> {
+
+  if (useCache) {
+    const cached = analysisCache.get(asset);
+    if (cached && cached.expiresAt > Date.now()) {
+      console.log(`[Cache] Returning cached verdict for ${asset}`);
+      const verdict = cached.verdict;
+      if (emit) emit({ type: 'verdict', verdict });
+      return verdict;
+    }
+  }
+
   const verdict = await runAgentLoop(asset, (event) => {
     if (emit) emit(event);
     broadcastToFeed(event);
@@ -138,6 +155,12 @@ export async function runAnalyisAndTrack(asset: string, emit?: (event: AgentEven
   await saveVerdict({
     ...fullVerdict,
     sourcesChecked: JSON.stringify(fullVerdict.sourcesChecked)
+  });
+
+  // Update Cache
+  analysisCache.set(asset, {
+    verdict: fullVerdict,
+    expiresAt: Date.now() + CACHE_TTL_MS
   });
 
   // Final broadcast

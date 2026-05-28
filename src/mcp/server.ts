@@ -309,6 +309,8 @@ server.prompt(
 
 async function main() {
   await initDb();
+  const { initMonitoring } = await import('../logic/monitoring');
+  await initMonitoring();
 
   const mode = process.argv.includes('--sse') ? 'sse' : 'stdio';
 
