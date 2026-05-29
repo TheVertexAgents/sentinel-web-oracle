@@ -1,917 +1,748 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sentinel Web Oracle</title>
+  <title>Sentinel Web Oracle | Cyber-Ops Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    :root {
-      --bg: #0a0e1a;
-      --surface: #111827;
-      --surface2: #1a2235;
-      --border: #1e2d45;
-      --accent: #3b82f6;
-      --accent-glow: rgba(59,130,246,0.15);
-      --critical: #ef4444;
-      --critical-bg: rgba(239,68,68,0.1);
-      --elevated: #f59e0b;
-      --elevated-bg: rgba(245,158,11,0.1);
-      --nominal: #22c55e;
-      --nominal-bg: rgba(34,197,94,0.1);
-      --text: #e2e8f0;
-      --muted: #64748b;
-      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            mono: ['JetBrains Mono', 'monospace'],
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            obsidian: '#0d1117',
+            panel: '#161b22',
+            cyan: {
+              500: '#00f2fe',
+            },
+            threat: '#ef4444',
+          },
+          boxShadow: {
+            cyber: '0 0 15px rgba(0, 242, 254, 0.15)',
+            'cyber-red': '0 0 20px rgba(239, 68, 68, 0.3)',
+          },
+          animation: {
+            'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          }
+        }
+      }
+    }
+  </script>
+  <style type="text/tailwindcss">
+    @layer components {
+      .cyber-border {
+        @apply border border-cyan-500/20 shadow-cyber hover:border-cyan-500/40 transition-all duration-300;
+      }
+      .panel-bg {
+        @apply bg-panel rounded-lg overflow-hidden;
+      }
+      .neon-text-cyan {
+        text-shadow: 0 0 10px rgba(0, 242, 254, 0.5);
+      }
+      .neon-text-red {
+        text-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+      }
+      .ticker-item {
+        @apply flex items-center px-8 py-2 font-mono text-xs gap-3 border-r border-cyan-500/10 whitespace-nowrap;
+      }
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      overflow-x: hidden;
-    }
-
-    /* ── Ticker ── */
-    .ticker-wrap {
-      width: 100%;
-      overflow: hidden;
-      background: var(--surface2);
-      border-bottom: 1px solid var(--border);
-      height: 40px;
-      display: flex;
-      align-items: center;
-    }
-    .ticker {
-      display: flex;
-      white-space: nowrap;
-      animation: ticker 60s linear infinite;
-    }
-    .ticker:hover { animation-play-state: paused; }
-    .ticker-item {
-      display: inline-flex;
-      align-items: center;
-      padding: 0 30px;
-      font-family: var(--mono);
-      font-size: 13px;
-      gap: 10px;
-      border-right: 1px solid var(--border);
-    }
-    .ticker-item .asset { font-weight: 800; color: #fff; }
-    .ticker-item .level { font-weight: 700; padding: 2px 8px; border-radius: 4px; font-size: 11px; }
-    .ticker-item .level.CRITICAL { background: var(--critical); color: #fff; }
-    .ticker-item .level.ELEVATED { background: var(--elevated); color: #000; }
-    .ticker-item .level.NOMINAL  { background: var(--nominal);  color: #000; }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #484f58; }
 
     @keyframes ticker {
-      0% { transform: translate3d(0, 0, 0); }
-      100% { transform: translate3d(-100%, 0, 0); }
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
     }
-
-    /* ── Header ── */
-    header {
-      border-bottom: 1px solid var(--border);
-      padding: 16px 32px;
+    .animate-ticker {
       display: flex;
-      align-items: center;
-      gap: 12px;
-      background: var(--surface);
+      width: max-content;
+      animation: ticker 40s linear infinite;
     }
-    header .logo { font-size: 24px; filter: drop-shadow(0 0 8px var(--accent)); }
-    header h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; background: linear-gradient(to right, #fff, var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    header .subtitle { font-size: 12px; color: var(--muted); margin-top: 2px; }
-    header .badge {
-      margin-left: auto;
-      font-size: 11px;
-      padding: 4px 12px;
-      border-radius: 20px;
-      border: 1px solid var(--border);
-      color: var(--muted);
-      background: rgba(255,255,255,0.03);
-    }
-    header .badge span { color: var(--nominal); font-weight: 700; }
-
-    .demo-toggle {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      color: var(--muted);
-      font-size: 10px;
-      padding: 4px 8px;
-      border-radius: 4px;
-      cursor: pointer;
-      margin-left: 12px;
-      font-weight: 700;
-    }
-    .demo-toggle.active {
-      border-color: var(--nominal);
-      color: var(--nominal);
-      background: var(--nominal-bg);
-    }
-
-    /* ── Main layout ── */
-    main {
-      flex: 1;
-      display: grid;
-      grid-template-columns: 420px 1fr;
-      gap: 24px;
-      max-width: 1600px;
-      width: 100%;
-      margin: 0 auto;
-      padding: 24px;
-    }
-
-    @media (max-width: 1100px) {
-      main { grid-template-columns: 1fr; }
-    }
-
-    /* ── Panel ── */
-    .panel {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      overflow: hidden;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-      display: flex;
-      flex-direction: column;
-    }
-    .panel-header {
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--border);
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1.2px;
-      color: var(--muted);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      background: rgba(255,255,255,0.02);
-    }
-    .panel-body { padding: 24px; flex: 1; }
-
-    /* ── Input form ── */
-    .input-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
-    label { font-size: 11px; color: var(--muted); font-weight: 700; letter-spacing: 0.5px; }
-
-    .asset-input-row { display: flex; gap: 10px; }
-
-    input[type="text"] {
-      flex: 1;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px 16px;
-      color: var(--text);
-      font-size: 16px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      outline: none;
-      transition: all 0.2s;
-      box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
-    }
-    input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow), inset 0 2px 4px rgba(0,0,0,0.2); }
-    input[type="text"]::placeholder { color: var(--muted); font-weight: 400; }
-
-    button.analyze-btn {
-      background: linear-gradient(135deg, var(--accent), #2563eb);
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      padding: 12px 24px;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.2s;
-      white-space: nowrap;
-      box-shadow: 0 4px 12px rgba(59,130,246,0.3);
-    }
-    button.analyze-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(59,130,246,0.4); }
-    button.analyze-btn:active { transform: translateY(0); }
-    button.analyze-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
-
-    /* ── Quick picks ── */
-    .quick-picks { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
-    .quick-pick {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 6px 12px;
-      font-size: 12px;
-      font-weight: 700;
-      cursor: pointer;
-      color: var(--text);
-      transition: all 0.15s;
-    }
-    .quick-pick:hover { border-color: var(--accent); background: var(--accent-glow); transform: scale(1.05); }
-
-    /* ── Status indicator ── */
-    .status-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 16px;
-      border-radius: 10px;
-      background: var(--surface2);
-      font-size: 13px;
-      min-height: 48px;
-      border: 1px solid var(--border);
-    }
-    .status-dot {
-      width: 10px; height: 10px;
-      border-radius: 50%;
-      background: var(--muted);
-      flex-shrink: 0;
-      box-shadow: 0 0 10px rgba(0,0,0,0.5);
-    }
-    .status-dot.pulse {
-      background: var(--accent);
-      animation: pulse 1.2s ease-in-out infinite;
-      box-shadow: 0 0 12px var(--accent);
-    }
-
-    /* Glassmorphism for panels */
-    .panel {
-      background: rgba(17, 24, 39, 0.7);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-    }
-
-    /* Animation for scanning */
-    @keyframes scanning {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
-    }
-    .scanning-active {
-      background: linear-gradient(-45deg, #111827, #1e293b, #3b82f6, #111827);
-      background-size: 400% 400%;
-      animation: scanning 3s ease infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(1.4); }
-    }
-
-    /* ── Verdict card ── */
-    .verdict-card {
-      border-radius: 12px;
-      padding: 24px;
-      margin-top: 20px;
-      border: 1px solid var(--border);
-      display: none;
-      background: rgba(255,255,255,0.02);
-      animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
-    .verdict-card.show { display: block; }
-    .verdict-card.CRITICAL { background: var(--critical-bg); border-color: var(--critical); box-shadow: 0 8px 32px rgba(239,68,68,0.15); }
-    .verdict-card.ELEVATED { background: var(--elevated-bg); border-color: var(--elevated); box-shadow: 0 8px 32px rgba(245,158,11,0.15); }
-    .verdict-card.NOMINAL  { background: var(--nominal-bg);  border-color: var(--nominal); box-shadow: 0 8px 32px rgba(34,197,94,0.15); }
-
-    .verdict-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-    .verdict-metrics { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; font-size: 11px; color: var(--muted); font-family: var(--mono); }
-    .threat-badge {
-      font-size: 12px;
-      font-weight: 800;
-      padding: 4px 12px;
-      border-radius: 6px;
-      letter-spacing: 1px;
-    }
-    .CRITICAL .threat-badge { background: var(--critical); color: #fff; }
-    .ELEVATED .threat-badge { background: var(--elevated); color: #000; }
-    .NOMINAL  .threat-badge { background: var(--nominal);  color: #000; }
-
-    .risk-action {
-      font-size: 12px;
-      font-weight: 800;
-      padding: 4px 12px;
-      border-radius: 6px;
-      letter-spacing: 1px;
-      border: 2px solid currentColor;
-    }
-    .risk-action.HOLD    { color: var(--critical); }
-    .risk-action.MONITOR { color: var(--elevated); }
-    .risk-action.CLEAR   { color: var(--nominal); }
-
-    .verdict-asset { font-size: 22px; font-weight: 800; color: #fff; }
-    .verdict-summary { font-size: 14px; color: var(--text); line-height: 1.6; margin-bottom: 16px; font-weight: 500; }
-    .verdict-reason { font-size: 12px; color: var(--muted); margin-bottom: 20px; font-style: italic; }
-
-    .evidence-list { display: flex; flex-direction: column; gap: 8px; }
-    .evidence-item {
-      background: rgba(0,0,0,0.2);
-      border-radius: 8px;
-      padding: 10px 14px;
-      font-size: 12px;
-      border: 1px solid rgba(255,255,255,0.05);
-      transition: border-color 0.2s;
-    }
-    .evidence-item:hover { border-color: rgba(255,255,255,0.15); }
-    .evidence-item a {
-      color: var(--accent);
-      text-decoration: none;
-      font-weight: 600;
-    }
-    .evidence-item a:hover { text-decoration: underline; }
-
-    .verdict-ts { font-size: 10px; color: var(--muted); margin-top: 16px; font-family: var(--mono); text-align: right; }
-
-    /* ── Charts ── */
-    .chart-container {
-      background: rgba(0,0,0,0.2);
-      border-radius: 12px;
-      padding: 16px;
-      border: 1px solid var(--border);
-      margin-top: 16px;
-    }
-    .chart-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-top: 16px;
-    }
-    @media (max-width: 600px) {
-      .chart-grid { grid-template-columns: 1fr; }
-    }
-
-    /* ── Activity log ── */
-    .log-container {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    .log-scroll {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px;
-      font-family: var(--mono);
-      font-size: 12px;
-      line-height: 1.6;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    .log-scroll::-webkit-scrollbar { width: 6px; }
-    .log-scroll::-webkit-scrollbar-track { background: transparent; }
-    .log-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-
-    .log-entry {
-      display: flex;
-      gap: 12px;
-      padding: 8px 12px;
-      border-radius: 8px;
-      animation: fadeIn 0.2s ease;
-      border: 1px solid transparent;
-    }
-    @keyframes fadeIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
-
-    .log-entry.tool_call  { background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.1); }
-    .log-entry.tool_result { background: rgba(255,255,255,0.03); }
-    .log-entry.verdict    { background: rgba(34,197,94,0.1); border-color: rgba(34,197,94,0.1); }
-    .log-entry.error      { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.1); }
-    .log-entry.system     { background: transparent; border: none; font-weight: 700; color: var(--accent); }
-
-    .log-icon { flex-shrink: 0; width: 18px; text-align: center; font-size: 14px; }
-    .log-time { color: var(--muted); flex-shrink: 0; font-size: 10px; }
-    .log-text { flex: 1; word-break: break-all; }
-    .log-text .tool-name { color: #fff; font-weight: 700; }
-    .log-text .tool-input { color: var(--muted); }
-    .log-text .result-preview { color: #94a3b8; }
-    .log-text .verdict-text { color: var(--nominal); font-weight: 700; }
-    .log-text .error-text { color: var(--critical); }
-
-    .empty-log {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      color: var(--muted);
-      gap: 12px;
-      font-family: var(--mono);
-      opacity: 0.5;
-    }
-    .empty-log .big-icon { font-size: 48px; }
-
-    /* ── Footer ── */
-    footer {
-      border-top: 1px solid var(--border);
-      padding: 16px 32px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-size: 11px;
-      color: var(--muted);
-      background: var(--surface);
-    }
-    footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
-    footer a:hover { text-decoration: underline; }
+    .animate-ticker:hover { animation-play-state: paused; }
   </style>
 </head>
-<body>
+<body class="bg-obsidian text-slate-200 font-sans h-screen flex flex-col overflow-hidden">
 
-<div class="ticker-wrap">
-  <div class="ticker" id="ticker">
-    <!-- Ticker items will be injected here -->
-    <div class="ticker-item"><span>📡 Initializing Sentinel market feed...</span></div>
+  <!-- TOP TICKER -->
+  <div class="w-full bg-panel border-b border-cyan-500/20 h-10 flex items-center overflow-hidden z-20">
+    <div class="animate-ticker" id="ticker">
+      <!-- Ticker items will be injected here twice for seamless loop -->
+      <div class="ticker-item"><span class="text-cyan-500">📡</span> INITIALIZING SENTINEL MARKET FEED...</div>
+      <div class="ticker-item"><span class="text-cyan-500">📡</span> INITIALIZING SENTINEL MARKET FEED...</div>
+    </div>
   </div>
-</div>
 
-<header>
-  <span class="logo">🛡️</span>
-  <div>
-    <h1>Sentinel Web Oracle</h1>
-    <div class="subtitle">Live crypto threat intelligence · Powered by Bright Data</div>
-  </div>
-  <div class="badge">Status: <span id="networkStatus">Live Network Active</span></div>
-  <button class="demo-toggle" id="demoToggle" onclick="toggleDemo()">DEMO MODE: OFF</button>
-</header>
+  <!-- MAIN DASHBOARD GRID -->
+  <div class="grid grid-cols-12 gap-4 flex-1 p-4 overflow-hidden">
 
-<main>
-  <!-- Left Column -->
-  <div style="display:flex;flex-direction:column;gap:24px;">
-
-    <!-- Analysis Panel -->
-    <div class="panel">
-      <div class="panel-header">🔍 Threat Engine</div>
-      <div class="panel-body">
-
-        <div class="input-group">
-          <label>ASSET IDENTIFIER</label>
-          <div class="asset-input-row">
-            <input type="text" id="assetInput" placeholder="Enter Ticker (e.g. BTC, ETH)" maxlength="20" />
-            <button class="analyze-btn" id="analyzeBtn" onclick="startAnalysis()">Deep Scan</button>
-          </div>
+    <!-- LEFT COLUMN: TRACKING STATUS (Col Span: 2) -->
+    <aside class="col-span-2 flex flex-col gap-4 overflow-hidden">
+      <div class="panel-bg cyber-border h-full flex flex-col">
+        <div class="p-3 border-b border-cyan-500/20 bg-cyan-500/5">
+          <h2 class="text-xs font-bold tracking-widest text-cyan-500 uppercase">Tracking Status</h2>
         </div>
-
-        <div class="quick-picks">
-          <span class="quick-pick" onclick="setAsset('BTC')">BTC</span>
-          <span class="quick-pick" onclick="setAsset('ETH')">ETH</span>
-          <span class="quick-pick" onclick="setAsset('SOL')">SOL</span>
-          <span class="quick-pick" onclick="setAsset('USDC')">USDC</span>
-          <span class="quick-pick" onclick="setAsset('UNI')">UNI</span>
-          <span class="quick-pick" onclick="setAsset('AAVE')">AAVE</span>
-        </div>
-
-        <div class="status-row" id="statusRow">
-          <div class="status-dot" id="statusDot"></div>
-          <span id="statusText">Ready for asset verification</span>
-        </div>
-
-        <!-- Verdict Result -->
-        <div class="verdict-card" id="verdictCard">
-          <div class="verdict-header">
-            <span class="threat-badge" id="threatBadge"></span>
-            <span class="risk-action" id="riskAction"></span>
-            <span class="verdict-asset" id="verdictAsset"></span>
-          </div>
-
-          <div class="verdict-metrics" id="verdictMetrics"></div>
-
-          <!-- Risk Gauge -->
-          <div style="height: 160px; position: relative; margin: 10px 0;">
-            <canvas id="riskGauge"></canvas>
-            <div id="gaugeLabel" style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); font-size: 28px; font-weight: 900; font-family: var(--mono); color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.3);">0</div>
-          </div>
-
-          <div class="verdict-summary" id="verdictSummary"></div>
-          <div class="verdict-reason" id="verdictReason"></div>
-
-          <!-- Secondary Charts -->
-          <div class="chart-grid">
-            <div class="chart-container" style="height: 140px; padding: 10px;">
-              <canvas id="historyChart"></canvas>
+        <div class="flex-1 overflow-y-auto p-2 space-y-2" id="assetList">
+          <!-- Assets will be rendered here -->
+          <button onclick="setAsset('BTC')" id="asset-BTC" class="w-full text-left p-3 rounded border border-transparent hover:border-cyan-500/30 hover:bg-cyan-500/5 transition-all group relative overflow-hidden">
+            <div class="flex justify-between items-center relative z-10">
+              <span class="font-bold text-sm group-hover:text-cyan-400 transition-colors">BITCOIN (BTC)</span>
+              <span class="text-[10px] text-slate-500 group-hover:text-cyan-600 font-mono">LIVE</span>
             </div>
-            <div class="chart-container" style="height: 140px; padding: 10px;">
-              <canvas id="sourcesChart"></canvas>
+            <div class="absolute inset-y-0 left-0 w-1 bg-cyan-500 transform -translate-x-full group-[.active]:translate-x-0 transition-transform"></div>
+          </button>
+          <!-- Repeated for other assets -->
+          <button onclick="setAsset('ETH')" id="asset-ETH" class="w-full text-left p-3 rounded border border-transparent hover:border-cyan-500/30 hover:bg-cyan-500/5 transition-all group relative overflow-hidden">
+            <div class="flex justify-between items-center relative z-10">
+              <span class="font-bold text-sm group-hover:text-cyan-400 transition-colors">ETHEREUM (ETH)</span>
+              <span class="text-[10px] text-slate-500 group-hover:text-cyan-600 font-mono">LIVE</span>
+            </div>
+            <div class="absolute inset-y-0 left-0 w-1 bg-cyan-500 transform -translate-x-full group-[.active]:translate-x-0 transition-transform"></div>
+          </button>
+          <button onclick="setAsset('SOL')" id="asset-SOL" class="w-full text-left p-3 rounded border border-transparent hover:border-cyan-500/30 hover:bg-cyan-500/5 transition-all group relative overflow-hidden">
+            <div class="flex justify-between items-center relative z-10">
+              <span class="font-bold text-sm group-hover:text-cyan-400 transition-colors">SOLANA (SOL)</span>
+              <span class="text-[10px] text-slate-500 group-hover:text-cyan-600 font-mono">LIVE</span>
+            </div>
+            <div class="absolute inset-y-0 left-0 w-1 bg-cyan-500 transform -translate-x-full group-[.active]:translate-x-0 transition-transform"></div>
+          </button>
+          <button onclick="setAsset('USDC')" id="asset-USDC" class="w-full text-left p-3 rounded border border-transparent hover:border-cyan-500/30 hover:bg-cyan-500/5 transition-all group relative overflow-hidden">
+            <div class="flex justify-between items-center relative z-10">
+              <span class="font-bold text-sm group-hover:text-cyan-400 transition-colors">USD COIN (USDC)</span>
+              <span class="text-[10px] text-slate-500 group-hover:text-cyan-600 font-mono">LIVE</span>
+            </div>
+            <div class="absolute inset-y-0 left-0 w-1 bg-cyan-500 transform -translate-x-full group-[.active]:translate-x-0 transition-transform"></div>
+          </button>
+          <button onclick="setAsset('UNI')" id="asset-UNI" class="w-full text-left p-3 rounded border border-transparent hover:border-cyan-500/30 hover:bg-cyan-500/5 transition-all group relative overflow-hidden">
+            <div class="flex justify-between items-center relative z-10">
+              <span class="font-bold text-sm group-hover:text-cyan-400 transition-colors">UNISWAP (UNI)</span>
+              <span class="text-[10px] text-slate-500 group-hover:text-cyan-600 font-mono">LIVE</span>
+            </div>
+            <div class="absolute inset-y-0 left-0 w-1 bg-cyan-500 transform -translate-x-full group-[.active]:translate-x-0 transition-transform"></div>
+          </button>
+          <button onclick="setAsset('AAVE')" id="asset-AAVE" class="w-full text-left p-3 rounded border border-transparent hover:border-cyan-500/30 hover:bg-cyan-500/5 transition-all group relative overflow-hidden">
+            <div class="flex justify-between items-center relative z-10">
+              <span class="font-bold text-sm group-hover:text-cyan-400 transition-colors">AAVE (AAVE)</span>
+              <span class="text-[10px] text-slate-500 group-hover:text-cyan-600 font-mono">LIVE</span>
+            </div>
+            <div class="absolute inset-y-0 left-0 w-1 bg-cyan-500 transform -translate-x-full group-[.active]:translate-x-0 transition-transform"></div>
+          </button>
+        </div>
+        <div class="p-3 border-t border-cyan-500/20 mt-auto bg-black/40">
+           <div class="flex items-center gap-2 mb-2">
+             <div class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+             <span class="text-[10px] font-mono text-slate-400" id="networkStatus">NETWORK ACTIVE</span>
+           </div>
+           <button onclick="toggleDemo()" id="demoToggle" class="w-full py-1 text-[9px] font-bold border border-slate-700 rounded hover:bg-slate-800 transition-colors tracking-tighter">DEMO MODE: OFF</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- CENTER COLUMN: CORE AGENTIC LOOP (Col Span: 7) -->
+    <main class="col-span-7 flex flex-col gap-4 overflow-hidden">
+
+      <!-- SCAN CONTROL -->
+      <div class="panel-bg cyber-border p-4 bg-gradient-to-r from-panel to-slate-900/50">
+        <div class="flex gap-4 items-center">
+          <div class="flex-1 relative">
+            <input type="text" id="assetInput" placeholder="ENTER TICKER (E.G. ETH)..." class="w-full bg-obsidian border border-cyan-500/30 rounded p-3 pl-4 text-cyan-400 font-mono focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 transition-all uppercase tracking-widest text-lg">
+            <div class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-cyan-500/50 font-mono hidden md:block">INPUT_ASSET</div>
+          </div>
+          <button onclick="startAnalysis()" id="analyzeBtn" class="bg-cyan-500 hover:bg-cyan-400 text-obsidian font-black px-8 py-3 rounded transition-all shadow-[0_0_15px_rgba(0,242,254,0.4)] hover:shadow-[0_0_25px_rgba(0,242,254,0.6)] active:scale-95 uppercase tracking-tighter text-sm">Deep Scan</button>
+        </div>
+      </div>
+
+      <!-- PROCESS PIPELINE -->
+      <div class="flex-1 panel-bg cyber-border flex flex-col relative overflow-hidden bg-black/20">
+        <div class="p-3 border-b border-cyan-500/20 flex justify-between items-center bg-cyan-500/5">
+          <h2 class="text-xs font-bold tracking-widest text-cyan-500 uppercase flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-cyan-500 animate-pulse"></span>
+            Agentic Loop Flow
+          </h2>
+          <span class="text-[10px] font-mono text-cyan-500/60" id="statusText">System Ready</span>
+        </div>
+
+        <div class="flex-1 p-6 flex flex-col gap-6 relative overflow-y-auto">
+          <!-- Flow Edges (Visual) -->
+          <div class="absolute left-1/2 top-10 bottom-10 w-0.5 bg-gradient-to-b from-cyan-500/50 via-cyan-500/10 to-cyan-500/50 -translate-x-1/2 hidden md:block z-0"></div>
+
+          <!-- DISAMBIGUATION Block -->
+          <div id="block-disambiguation" class="relative z-10 flex flex-col items-center group">
+            <div class="bg-panel border border-cyan-500/30 p-4 rounded-lg w-full max-w-md transition-all group-[.active]:border-cyan-500 group-[.active]:shadow-cyber group-[.verified]:border-green-500/50">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-[10px] font-mono text-cyan-500/60 uppercase">Step 01 // Disambiguation</span>
+                <span class="status-icon text-xs">🔍</span>
+              </div>
+              <div class="text-sm font-bold text-slate-300" id="disambiguation-msg">Awaiting asset verification...</div>
+              <div class="mt-2 text-[9px] font-mono text-slate-500 flex items-center gap-1">
+                <span class="w-1 h-1 rounded-full bg-slate-600"></span> TOOL: SERP API
+              </div>
             </div>
           </div>
 
-          <div class="evidence-list" id="evidenceList" style="margin-top: 16px;"></div>
-          <div class="verdict-ts" id="verdictTs"></div>
+          <!-- MULTI-SEARCH Block -->
+          <div id="block-search" class="relative z-10 flex flex-col items-center group">
+            <div class="bg-panel border border-cyan-500/30 p-4 rounded-lg w-full transition-all group-[.active]:border-cyan-500 group-[.active]:shadow-cyber group-[.verified]:border-green-500/50">
+              <div class="flex items-center justify-between mb-4">
+                <span class="text-[10px] font-mono text-cyan-500/60 uppercase">Step 02 // Multi-Vector Search</span>
+                <div class="flex gap-1">
+                   <div id="vector-exploit" class="w-1.5 h-1.5 rounded-full bg-slate-800 transition-colors"></div>
+                   <div id="vector-sec" class="w-1.5 h-1.5 rounded-full bg-slate-800 transition-colors"></div>
+                   <div id="vector-flash" class="w-1.5 h-1.5 rounded-full bg-slate-800 transition-colors"></div>
+                </div>
+              </div>
+              <div class="grid grid-cols-3 gap-3">
+                <div id="node-exploit" class="bg-obsidian/50 border border-slate-800 p-2 rounded text-center transition-all group-[.active-exploit]:border-cyan-500/50 group-[.active-exploit]:bg-cyan-500/5 group-[.done-exploit]:border-green-500/30">
+                  <div class="text-[10px] font-bold text-slate-400 group-[.active-exploit]:text-cyan-400">EXPLOIT NEWS</div>
+                  <div class="text-[14px] mt-1 opacity-20 group-[.active-exploit]:opacity-100 group-[.done-exploit]:opacity-100 group-[.done-exploit]:text-green-500">✅</div>
+                </div>
+                <div id="node-sec" class="bg-obsidian/50 border border-slate-800 p-2 rounded text-center transition-all group-[.active-sec]:border-cyan-500/50 group-[.active-sec]:bg-cyan-500/5 group-[.done-sec]:border-green-500/30">
+                  <div class="text-[10px] font-bold text-slate-400 group-[.active-sec]:text-cyan-400">SEC ENFORCEMENT</div>
+                  <div class="text-[14px] mt-1 opacity-20 group-[.active-sec]:opacity-100 group-[.done-sec]:opacity-100 group-[.done-sec]:text-green-500">✅</div>
+                </div>
+                <div id="node-flash" class="bg-obsidian/50 border border-slate-800 p-2 rounded text-center transition-all group-[.active-flash]:border-cyan-500/50 group-[.active-flash]:bg-cyan-500/5 group-[.done-flash]:border-green-500/30">
+                  <div class="text-[10px] font-bold text-slate-400 group-[.active-flash]:text-cyan-400">FLASH LOANS</div>
+                  <div class="text-[14px] mt-1 opacity-20 group-[.active-flash]:opacity-100 group-[.done-flash]:opacity-100 group-[.done-flash]:text-green-500">✅</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- DEEP SCRAPE Block -->
+          <div id="block-scrape" class="relative z-10 flex flex-col items-center group">
+            <div class="bg-panel border border-cyan-500/30 p-4 rounded-lg w-full max-w-md transition-all group-[.active]:border-cyan-500 group-[.active]:shadow-cyber group-[.verified]:border-green-500/50">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-[10px] font-mono text-cyan-500/60 uppercase">Step 03 // Deep Scrape Analysis</span>
+                <span class="text-[10px] font-mono text-slate-500">WEB UNLOCKER</span>
+              </div>
+              <div class="grid grid-cols-3 gap-2" id="scrape-grid">
+                <div class="bg-obsidian p-2 rounded border border-slate-800/50 flex flex-col items-center gap-1 opacity-30 transition-all hover:opacity-100 cursor-help" title="Coindesk">
+                  <div class="text-lg">📰</div>
+                  <div class="text-[8px] font-mono text-slate-500">COINDESK</div>
+                </div>
+                <div class="bg-obsidian p-2 rounded border border-slate-800/50 flex flex-col items-center gap-1 opacity-30 transition-all hover:opacity-100 cursor-help" title="X / Twitter">
+                  <div class="text-lg">𝕏</div>
+                  <div class="text-[8px] font-mono text-slate-500">X_STREAM</div>
+                </div>
+                <div class="bg-obsidian p-2 rounded border border-slate-800/50 flex flex-col items-center gap-1 opacity-30 transition-all hover:opacity-100 cursor-help" title="Reddit">
+                  <div class="text-lg">🤖</div>
+                  <div class="text-[8px] font-mono text-slate-500">REDDIT</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SYNTHESIS Block -->
+          <div id="block-synthesis" class="relative z-10 flex flex-col items-center group">
+            <div class="bg-panel border border-cyan-500/30 p-4 rounded-lg w-full max-w-md transition-all group-[.active]:border-cyan-500 group-[.active]:shadow-cyber group-[.verified]:border-green-500/50">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-[10px] font-mono text-cyan-500/60 uppercase">Step 04 // Risk Synthesis</span>
+                <span class="text-[10px] font-mono text-slate-500">GROQ LLAMA-3.3-70B</span>
+              </div>
+              <div class="flex items-center gap-4">
+                 <div class="w-12 h-12 rounded-full bg-obsidian border border-cyan-500/20 flex items-center justify-center relative">
+                    <span class="text-xl group-[.active]:animate-pulse">🧠</span>
+                    <div class="absolute inset-0 rounded-full border border-cyan-500 opacity-0 group-[.active]:animate-ping"></div>
+                 </div>
+                 <div class="flex-1">
+                    <div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                       <div id="synthesis-progress" class="h-full bg-cyan-500 w-0 transition-all duration-1000"></div>
+                    </div>
+                    <div class="mt-1 text-[9px] font-mono text-slate-500 uppercase tracking-tighter" id="synthesis-status">Awaiting evidence batch...</div>
+                 </div>
+              </div>
+            </div>
+          </div>
         </div>
-
       </div>
 
-      <div class="bd-badge">
-        <span>⚡</span>
-        <span>Infrastructure: <strong>Bright Data</strong> SERP · Unlocker · Browser</span>
+      <!-- REDESIGNED VERDICT CARD -->
+      <div id="verdictCard" class="panel-bg border-2 border-slate-800 p-5 hidden transition-all duration-500">
+        <div class="flex items-start gap-5">
+           <div class="w-32 h-32 flex-shrink-0 relative">
+              <canvas id="riskGauge"></canvas>
+              <div id="gaugeLabel" class="absolute inset-0 flex flex-col items-center justify-center mt-4">
+                <span class="text-3xl font-black font-mono">0</span>
+                <span class="text-[8px] font-mono text-slate-500 -mt-1">THREAT SCORE</span>
+              </div>
+           </div>
+           <div class="flex-1">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                  <span id="threatBadge" class="px-2 py-0.5 rounded bg-slate-800 text-[10px] font-black tracking-widest uppercase">NOMINAL</span>
+                  <span id="riskAction" class="px-2 py-0.5 rounded border border-slate-600 text-[10px] font-black tracking-widest uppercase">MONITOR</span>
+                </div>
+                <span id="verdictAsset" class="text-xl font-black font-mono tracking-tighter">BITCOIN</span>
+              </div>
+              <div class="text-slate-200 text-sm font-semibold mb-2 leading-tight" id="verdictSummary">
+                Scan your first asset to see the automated threat intelligence output here.
+              </div>
+              <div class="text-slate-500 text-[11px] italic" id="verdictReason">
+                "No active scan telemetry detected."
+              </div>
+           </div>
+        </div>
+        <div class="mt-4 grid grid-cols-4 gap-2 pt-4 border-t border-white/5">
+           <div class="col-span-3 flex gap-2 overflow-x-auto pb-1" id="evidenceList">
+             <!-- Evidence pills -->
+           </div>
+           <div class="text-right flex flex-col justify-end">
+              <span class="text-[8px] font-mono text-slate-500 uppercase" id="verdictTs">2026-05-28 10:42Z</span>
+           </div>
+        </div>
       </div>
-    </div>
 
-    <!-- Info Panel -->
-    <div class="panel">
-      <div class="panel-header">⚙️ Scan Protocol</div>
-      <div class="panel-body" style="display:flex;flex-direction:column;gap:12px;font-size:13px;color:#94a3b8;line-height:1.6;">
-        <div><strong style="color:#fff;">1. Discovery</strong><br>SERP API identifies canonical sources and recent news headlines.</div>
-        <div><strong style="color:#fff;">2. Multi-Vector Analysis</strong><br>Parallel scans for exploits, regulatory action, and social sentiment.</div>
-        <div><strong style="color:#fff;">3. Deep Verification</strong><br>Web Unlocker & Scraping Browser extract full context from protected sites.</div>
-        <div><strong style="color:#fff;">4. Risk Synthesis</strong><br>LLM evaluates evidence credibility to generate actionable signals.</div>
+    </main>
+
+    <!-- RIGHT COLUMN: ANALYTICS (Col Span: 3) -->
+    <section class="col-span-3 flex flex-col gap-4 overflow-hidden">
+
+      <!-- THREAT HISTORY -->
+      <div class="panel-bg cyber-border flex-1 flex flex-col min-h-0">
+        <div class="p-3 border-b border-cyan-500/20 bg-cyan-500/5">
+          <h2 class="text-xs font-bold tracking-widest text-cyan-500 uppercase">Threat History</h2>
+        </div>
+        <div class="flex-1 overflow-y-auto p-3 space-y-2 font-mono text-[10px]" id="historyLog">
+          <!-- History entries -->
+          <div class="flex items-center gap-2 p-2 rounded bg-black/20 border border-white/5">
+            <span class="text-slate-500">10:42Z</span>
+            <span class="font-bold text-cyan-500">ETH</span>
+            <span class="flex-1 text-slate-400 truncate">DISAMBIGUATION_START</span>
+            <div class="w-1.5 h-1.5 rounded-full bg-cyan-500"></div>
+          </div>
+        </div>
       </div>
-    </div>
+
+      <!-- NETWORK SECURITY OVERVIEW -->
+      <div class="panel-bg cyber-border h-40 flex flex-col">
+        <div class="p-2 border-b border-cyan-500/20 flex justify-between items-center px-3">
+          <h2 class="text-[10px] font-bold tracking-widest text-slate-400 uppercase">Network Security</h2>
+          <span class="text-[9px] font-mono text-green-500">LIVE_OPS</span>
+        </div>
+        <div class="flex-1 p-2 flex items-center justify-center">
+           <!-- SVG Line Chart Mock -->
+           <svg class="w-full h-full text-cyan-500/30" viewBox="0 0 200 60" preserveAspectRatio="none">
+             <path d="M0,50 Q20,20 40,45 T80,30 T120,55 T160,10 T200,40" fill="none" stroke="currentColor" stroke-width="1.5"></path>
+             <path d="M0,50 Q20,20 40,45 T80,30 T120,55 T160,10 T200,40 L200,60 L0,60 Z" fill="url(#grad)" stroke="none"></path>
+             <defs>
+               <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                 <stop offset="0%" style="stop-color:currentColor;stop-opacity:0.2" />
+                 <stop offset="100%" style="stop-color:currentColor;stop-opacity:0" />
+               </linearGradient>
+             </defs>
+           </svg>
+        </div>
+      </div>
+
+      <!-- REQUEST ORIGINS -->
+      <div class="panel-bg cyber-border h-48 flex flex-col">
+        <div class="p-2 border-b border-cyan-500/20 px-3">
+          <h2 class="text-[10px] font-bold tracking-widest text-slate-400 uppercase">Request Origins</h2>
+        </div>
+        <div class="flex-1 p-2 relative bg-obsidian">
+          <!-- SVG Map Mock -->
+          <svg class="w-full h-full opacity-40" viewBox="0 0 200 100">
+            <path d="M30,30 L40,25 L50,30 L60,25 L70,30 L80,35 L90,30 L100,25 L110,30 L120,35 L130,30 L140,25 L150,30 L160,25 L170,30 M20,50 L180,50 M30,70 L170,70" stroke="#30363d" stroke-width="0.5" fill="none"></path>
+            <circle cx="45" cy="35" r="1.5" fill="#ef4444" class="animate-pulse"></circle>
+            <circle cx="155" cy="45" r="1.5" fill="#00f2fe" class="animate-pulse"></circle>
+            <circle cx="100" cy="65" r="1.5" fill="#f59e0b" class="animate-pulse"></circle>
+            <circle cx="80" cy="25" r="1.5" fill="#00f2fe" class="animate-pulse"></circle>
+          </svg>
+          <div class="absolute bottom-2 left-2 flex flex-col gap-1">
+             <div class="flex items-center gap-1">
+                <div class="w-1 h-1 rounded-full bg-cyan-500"></div>
+                <span class="text-[7px] font-mono text-slate-500">US_EAST_01</span>
+             </div>
+             <div class="flex items-center gap-1">
+                <div class="w-1 h-1 rounded-full bg-threat"></div>
+                <span class="text-[7px] font-mono text-slate-500">EU_WEST_04</span>
+             </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
 
   </div>
 
-  <!-- Right Column: Activity Log -->
-  <div class="panel">
-    <div class="panel-header">📡 Agent Telemetry</div>
-    <div class="log-container">
-      <div class="log-scroll" id="logScroll">
-        <div class="empty-log" id="emptyLog">
-          <div class="big-icon">🔭</div>
-          <div>Telemetry stream inactive</div>
-          <div style="font-size:11px;">Agent tool calls will appear here in real time</div>
-        </div>
-      </div>
+  <footer class="h-8 bg-panel border-t border-cyan-500/10 flex items-center justify-between px-6 text-[9px] font-mono text-slate-600">
+    <div>SENTINEL WEB ORACLE // v1.0.2-STABLE</div>
+    <div class="flex gap-4">
+      <a href="#" class="hover:text-cyan-500 transition-colors">DOCUMENTATION</a>
+      <a href="#" class="hover:text-cyan-500 transition-colors">SYSTEM_HEALTH</a>
+      <a href="#" class="hover:text-cyan-500 transition-colors">API_STATUS: 100%</a>
     </div>
-  </div>
-</main>
+  </footer>
 
-<footer>
-  <span>Sentinel Web Oracle · v1.0.0 · Hackathon Edition</span>
-  <span>
-    <a href="https://github.com/TheVertexAgents/sentinel-web-oracle" target="_blank">View Source</a>
-    &nbsp;·&nbsp;
-    <a href="/health" target="_blank">API Health</a>
-  </span>
-</footer>
+  <script>
+    let currentSSE = null;
+    let isDemoMode = false;
+    let charts = {
+      riskGauge: null
+    };
 
-<script>
-  let currentSSE = null;
-  let isDemoMode = false;
-  let charts = {
-    riskGauge: null,
-    historyChart: null,
-    sourcesChart: null
-  };
-
-  function toggleDemo() {
-    isDemoMode = !isDemoMode;
-    const btn = document.getElementById('demoToggle');
-    const status = document.getElementById('networkStatus');
-    if (isDemoMode) {
-      btn.textContent = 'DEMO MODE: ON';
-      btn.classList.add('active');
-      status.textContent = 'Simulated Environment';
-      addLog('system', '🧪', '<strong>Demo Mode Activated</strong>. Scans will return simulated data.');
-    } else {
-      btn.textContent = 'DEMO MODE: OFF';
-      btn.classList.remove('active');
-      status.textContent = 'Live Network Active';
-      addLog('system', '📡', '<strong>Live Mode Restored</strong>. Scans require API keys.');
-    }
-  }
-
-  // Initialize Ticker
-  async function refreshTicker() {
-    try {
-      const resp = await fetch('/api/latest-signals');
-      const signals = await resp.json();
-      const ticker = document.getElementById('ticker');
-      if (signals.length === 0) {
-        ticker.innerHTML = '<div class="ticker-item"><span>📡 No recent signals detected in last 24h</span></div>';
-        return;
+    function toggleDemo() {
+      isDemoMode = !isDemoMode;
+      const btn = document.getElementById('demoToggle');
+      const status = document.getElementById('networkStatus');
+      if (isDemoMode) {
+        btn.textContent = 'DEMO MODE: ON';
+        btn.classList.add('bg-cyan-500/20', 'text-cyan-400', 'border-cyan-500/50');
+        status.textContent = 'SIMULATED ENVIRONMENT';
+        status.classList.replace('text-green-500', 'text-cyan-400');
+        addHistory('SYSTEM', 'DEMO_MODE_ACTIVE');
+      } else {
+        btn.textContent = 'DEMO MODE: OFF';
+        btn.classList.remove('bg-cyan-500/20', 'text-cyan-400', 'border-cyan-500/50');
+        status.textContent = 'NETWORK ACTIVE';
+        status.classList.replace('text-cyan-400', 'text-green-500');
+        addHistory('SYSTEM', 'LIVE_MODE_RESTORED');
       }
-
-      // Double the items for seamless loop
-      const items = [...signals, ...signals].map(s => `
-        <div class="ticker-item">
-          <span class="asset">${s.asset}</span>
-          <span class="level ${s.threatLevel}">${s.threatLevel}</span>
-          <span style="color: var(--muted); font-size: 10px;">${new Date(s.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-        </div>
-      `).join('');
-      ticker.innerHTML = items;
-    } catch (err) {
-      console.error('Ticker refresh failed', err);
     }
-  }
-  refreshTicker();
-  setInterval(refreshTicker, 60000);
 
-  function setAsset(ticker) {
-    document.getElementById('assetInput').value = ticker;
-    document.getElementById('assetInput').focus();
-  }
+    async function refreshTicker() {
+      try {
+        const resp = await fetch('/api/latest-signals');
+        const signals = await resp.json();
+        const ticker = document.getElementById('ticker');
+        if (signals.length === 0) {
+          ticker.innerHTML = '<div class="ticker-item"><span class="text-cyan-500">📡</span> NO RECENT SIGNALS DETECTED IN LAST 24H</div>'.repeat(10);
+          return;
+        }
 
-  function ts() {
-    return new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  }
-
-  function addLog(type, icon, html) {
-    const emptyLog = document.getElementById('emptyLog');
-    if (emptyLog) emptyLog.remove();
-
-    const scroll = document.getElementById('logScroll');
-    const entry = document.createElement('div');
-    entry.className = `log-entry ${type}`;
-    entry.innerHTML = `
-      <span class="log-icon">${icon}</span>
-      <span class="log-time">${ts()}</span>
-      <span class="log-text">${html}</span>
-    `;
-    scroll.appendChild(entry);
-    scroll.scrollTop = scroll.scrollHeight;
-  }
-
-  function clearLog() {
-    const scroll = document.getElementById('logScroll');
-    scroll.innerHTML = `
-      <div class="empty-log" id="emptyLog">
-        <div class="big-icon">🔭</div>
-        <div>Telemetry stream inactive</div>
-        <div style="font-size:11px;">Agent tool calls will appear here in real time</div>
-      </div>
-    `;
-  }
-
-  function setStatus(text, pulsing) {
-    document.getElementById('statusText').textContent = text;
-    const dot = document.getElementById('statusDot');
-    dot.className = 'status-dot' + (pulsing ? ' pulse' : '');
-  }
-
-  // --- Chart Management ---
-
-  function initRiskGauge(score, level) {
-    const ctx = document.getElementById('riskGauge').getContext('2d');
-    const color = level === 'CRITICAL' ? '#ef4444' : (level === 'ELEVATED' ? '#f59e0b' : '#22c55e');
-
-    if (charts.riskGauge) charts.riskGauge.destroy();
-
-    charts.riskGauge = new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        datasets: [{
-          data: [score, 100 - score],
-          backgroundColor: [color, 'rgba(255,255,255,0.05)'],
-          borderWidth: 0,
-          circumference: 180,
-          rotation: 270,
-          borderRadius: 10
-        }]
-      },
-      options: {
-        aspectRatio: 2,
-        cutout: '85%',
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { enabled: false } }
+        const items = [...signals, ...signals].map(s => `
+          <div class="ticker-item">
+            <span class="font-bold text-white">${s.asset}</span>
+            <span class="${s.threatLevel === 'CRITICAL' ? 'text-threat' : 'text-cyan-500'} font-black">${s.threatLevel}</span>
+            <span class="text-slate-500 opacity-50">${new Date(s.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+          </div>
+        `).join('');
+        ticker.innerHTML = items;
+      } catch (err) {
+        console.error('Ticker refresh failed', err);
       }
-    });
+    }
+    refreshTicker();
+    setInterval(refreshTicker, 60000);
 
-    document.getElementById('gaugeLabel').textContent = score;
-    document.getElementById('gaugeLabel').style.color = color;
-  }
+    function setAsset(ticker) {
+      document.getElementById('assetInput').value = ticker;
+      document.querySelectorAll('#assetList button').forEach(btn => {
+        btn.classList.remove('active', 'border-cyan-500/50', 'bg-cyan-500/10');
+        if (btn.id === `asset-${ticker}`) {
+          btn.classList.add('active', 'border-cyan-500/50', 'bg-cyan-500/10');
+        }
+      });
+      startAnalysis();
+    }
 
-  async function initHistoryChart(asset) {
-    const ctx = document.getElementById('historyChart').getContext('2d');
-    try {
-      const resp = await fetch(`/api/history?asset=${asset}&hours=48`);
-      const data = await resp.json();
+    function addHistory(asset, action) {
+      const log = document.getElementById('historyLog');
+      const entry = document.createElement('div');
+      entry.className = 'flex items-center gap-2 p-2 rounded bg-black/20 border border-white/5 animate-fade-in';
+      const time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }) + 'Z';
+      entry.innerHTML = `
+        <span class="text-slate-500">${time}</span>
+        <span class="font-bold text-cyan-500">${asset}</span>
+        <span class="flex-1 text-slate-400 truncate">${action}</span>
+        <div class="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-cyber"></div>
+      `;
+      log.prepend(entry);
+    }
 
-      const labels = data.reverse().map(d => new Date(d.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}));
-      const scores = data.map(d => d.confidenceScore);
+    function setStatus(text, active = true) {
+      const statusText = document.getElementById('statusText');
+      statusText.textContent = text;
+      if (active) statusText.classList.add('text-cyan-500');
+      else statusText.classList.remove('text-cyan-500');
+    }
 
-      if (charts.historyChart) charts.historyChart.destroy();
+    function resetPipeline() {
+      const blocks = ['disambiguation', 'search', 'scrape', 'synthesis'];
+      blocks.forEach(b => {
+        const el = document.getElementById(`block-${b}`);
+        el.className = 'relative z-10 flex flex-col items-center group';
+      });
 
-      charts.historyChart = new Chart(ctx, {
-        type: 'line',
+      const searchNodes = ['exploit', 'sec', 'flash'];
+      searchNodes.forEach(n => {
+        document.getElementById(`block-search`).classList.remove(`active-${n}`, `done-${n}`);
+        document.getElementById(`vector-${n}`).className = 'w-1.5 h-1.5 rounded-full bg-slate-800 transition-colors';
+      });
+
+      document.getElementById('disambiguation-msg').textContent = 'Awaiting asset verification...';
+      document.getElementById('synthesis-progress').style.width = '0%';
+      document.getElementById('synthesis-status').textContent = 'Awaiting evidence batch...';
+
+      document.querySelectorAll('#scrape-grid > div').forEach(div => div.classList.add('opacity-30'));
+
+      document.getElementById('verdictCard').classList.add('hidden');
+    }
+
+    function initRiskGauge(score, level) {
+      const ctx = document.getElementById('riskGauge').getContext('2d');
+      const color = level === 'CRITICAL' ? '#ef4444' : (level === 'ELEVATED' ? '#f59e0b' : '#22c55e');
+
+      if (charts.riskGauge) charts.riskGauge.destroy();
+
+      charts.riskGauge = new Chart(ctx, {
+        type: 'doughnut',
         data: {
-          labels: labels,
           datasets: [{
-            label: 'Threat History',
-            data: scores,
-            borderColor: '#3b82f6',
-            backgroundColor: 'rgba(59,130,246,0.1)',
-            fill: true,
-            tension: 0.4,
-            pointRadius: 0
+            data: [score, 100 - score],
+            backgroundColor: [color, 'rgba(255,255,255,0.02)'],
+            borderWidth: 0,
+            circumference: 180,
+            rotation: 270,
+            borderRadius: 2
           }]
         },
         options: {
+          aspectRatio: 1,
+          cutout: '85%',
           responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            title: { display: true, text: 'THREAT SCORE TREND', color: '#64748b', font: { size: 10, weight: 'bold' } }
-          },
-          scales: {
-            x: { display: false },
-            y: { display: true, min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b', font: { size: 8 } } }
-          }
+          maintainAspectRatio: true,
+          plugins: { legend: { display: false }, tooltip: { enabled: false } }
         }
       });
-    } catch (err) { console.error('History chart failed', err); }
-  }
 
-  function initSourcesChart(evidence) {
-    const ctx = document.getElementById('sourcesChart').getContext('2d');
-    // Mocking credibility tiers since they aren't explicitly in the data yet but we can derive or use static
-    // Real implementation would use the tiers from the verdict
-    const data = {
-      labels: ['Tier 1', 'Tier 2', 'Tier 3+'],
-      datasets: [{
-        data: [evidence.length, Math.floor(evidence.length/2), 1],
-        backgroundColor: ['#22c55e', '#3b82f6', '#64748b'],
-        borderWidth: 0
-      }]
-    };
+      const label = document.getElementById('gaugeLabel');
+      label.querySelector('span:first-child').textContent = score;
+      label.querySelector('span:first-child').style.color = color;
+      if (level === 'CRITICAL') label.querySelector('span:first-child').classList.add('neon-text-red');
+      else label.querySelector('span:first-child').classList.remove('neon-text-red');
+    }
 
-    if (charts.sourcesChart) charts.sourcesChart.destroy();
+    function showVerdict(v) {
+      const card = document.getElementById('verdictCard');
+      card.classList.remove('hidden');
 
-    charts.sourcesChart = new Chart(ctx, {
-      type: 'doughnut',
-      data: data,
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          title: { display: true, text: 'SOURCE CREDIBILITY', color: '#64748b', font: { size: 10, weight: 'bold' } }
-        },
-        cutout: '70%'
+      const isCritical = v.threatLevel === 'CRITICAL';
+      card.className = `panel-bg border-2 p-5 transition-all duration-500 ${isCritical ? 'border-threat bg-threat/5 shadow-cyber-red' : 'border-cyan-500/30'}`;
+
+      const badge = document.getElementById('threatBadge');
+      badge.textContent = v.threatLevel;
+      badge.className = `px-2 py-0.5 rounded text-[10px] font-black tracking-widest uppercase ${isCritical ? 'bg-threat text-white' : 'bg-cyan-500 text-obsidian'}`;
+
+      const action = document.getElementById('riskAction');
+      action.textContent = v.riskAction;
+      action.className = `px-2 py-0.5 rounded border text-[10px] font-black tracking-widest uppercase ${isCritical ? 'border-threat text-threat' : 'border-cyan-500 text-cyan-500'}`;
+
+      document.getElementById('verdictAsset').textContent = v.asset;
+      document.getElementById('verdictAsset').className = `text-xl font-black font-mono tracking-tighter ${isCritical ? 'text-threat neon-text-red' : 'text-white'}`;
+
+      document.getElementById('verdictSummary').textContent = v.summary;
+      document.getElementById('verdictReason').textContent = `"${v.riskReason}"`;
+      document.getElementById('verdictTs').textContent = new Date(v.timestamp).toISOString().replace('T', ' ').substring(0, 19) + 'Z';
+
+      const evidenceList = document.getElementById('evidenceList');
+      evidenceList.innerHTML = '';
+      if (v.evidence && v.evidence.length > 0) {
+        v.evidence.forEach(e => {
+          const item = document.createElement('a');
+          item.href = e.url;
+          item.target = '_blank';
+          item.className = 'px-2 py-1 bg-white/5 border border-white/10 rounded text-[8px] font-mono text-slate-400 hover:border-cyan-500/50 hover:text-cyan-400 whitespace-nowrap';
+          item.textContent = e.title.substring(0, 20) + (e.title.length > 20 ? '...' : '');
+          evidenceList.appendChild(item);
+        });
       }
-    });
-  }
 
-  function showVerdict(v) {
-    const card = document.getElementById('verdictCard');
-    card.className = `verdict-card show ${v.threatLevel}`;
-
-    document.getElementById('threatBadge').textContent = v.threatLevel;
-    document.getElementById('riskAction').textContent = v.riskAction;
-    document.getElementById('riskAction').className = `risk-action ${v.riskAction}`;
-    document.getElementById('verdictAsset').textContent = v.asset;
-
-    document.getElementById('verdictMetrics').innerHTML = `
-      <span>Confidence: <strong>${v.confidenceScore}%</strong></span>
-      <span>·</span>
-      <span>Network Calls: <strong>${v.brightDataCallsUsed}</strong></span>
-    `;
-
-    document.getElementById('verdictSummary').textContent = v.summary;
-    document.getElementById('verdictReason').textContent = v.riskReason;
-    document.getElementById('verdictTs').textContent = `SCAN COMPLETED: ${new Date(v.timestamp).toLocaleString()}`;
-
-    const evidenceList = document.getElementById('evidenceList');
-    evidenceList.innerHTML = '';
-    if (v.evidence && v.evidence.length > 0) {
-      v.evidence.forEach(e => {
-        const item = document.createElement('div');
-        item.className = 'evidence-item';
-        item.innerHTML = `📎 <a href="${e.url}" target="_blank" rel="noopener">${e.title}</a>`;
-        evidenceList.appendChild(item);
-      });
+      initRiskGauge(v.confidenceScore, v.threatLevel);
+      addHistory(v.asset, `SCAN_COMPLETE_${v.threatLevel}`);
+      refreshTicker();
     }
 
-    // Update Charts
-    initRiskGauge(v.confidenceScore, v.threatLevel);
-    initHistoryChart(v.asset);
-    initSourcesChart(v.evidence || []);
-
-    // Update Ticker immediately
-    refreshTicker();
-  }
-
-  function startAnalysis() {
-    const asset = document.getElementById('assetInput').value.trim().toUpperCase();
-    if (!asset) {
-      document.getElementById('assetInput').focus();
-      return;
-    }
-
-    if (currentSSE) {
-      currentSSE.close();
-      currentSSE = null;
-    }
-
-    clearLog();
-    document.getElementById('verdictCard').className = 'verdict-card';
-    document.getElementById('analyzeBtn').disabled = true;
-    document.body.classList.add('scanning-active');
-    setStatus(`SCANNING ${asset} NETWORK...`, true);
-
-    addLog('system', '📡', `Initializing deep scan for asset: <strong>${asset}</strong>`);
-
-    if (isDemoMode) {
-      runDemoScan(asset);
-      return;
-    }
-
-    const url = `/stream?asset=${encodeURIComponent(asset)}`;
-    const sse = new EventSource(url);
-    currentSSE = sse;
-
-    sse.onmessage = (e) => {
-      let event;
-      try { event = JSON.parse(e.data); } catch { return; }
-
-      if (event.type === 'tool_call') {
-        const toolIcons = { search_web: '🔍', scrape_url: '🌐', browser_scrape: '🖥️' };
-        const icon = toolIcons[event.tool] || '🔧';
-        const inputStr = event.input ? Object.values(event.input)[0] : '';
-        addLog('tool_call', icon,
-          `<span class="tool-name">${event.tool}</span> <span class="tool-input">"${inputStr}"</span>`
-        );
-        setStatus(`${event.tool.toUpperCase()}: ${inputStr}`, true);
-
-      } else if (event.type === 'tool_result') {
-        const preview = typeof event.result === 'string' ? event.result.substring(0, 100) + '...' : 'Data received';
-        addLog('tool_result', '✅', `<span class="result-preview">${preview}</span>`);
-
-      } else if (event.type === 'verdict') {
-        const v = event.verdict;
-        const levelEmoji = { CRITICAL: '🚨', ELEVATED: '⚠️', NOMINAL: '✅' };
-        addLog('verdict', levelEmoji[v.threatLevel] || '📊',
-          `<span class="verdict-text">${v.threatLevel} → ${v.riskAction}</span> — SCAN COMPLETE`
-        );
-        showVerdict(v);
-        setStatus(`ANALYSIS COMPLETE: ${v.threatLevel}`, false);
-        document.getElementById('analyzeBtn').disabled = false;
-        document.body.classList.remove('scanning-active');
-        sse.close();
-
-      } else if (event.type === 'error') {
-        addLog('error', '❌', `<span class="error-text">${event.message}</span>`);
-        setStatus('SCAN FAILED', false);
-        document.getElementById('analyzeBtn').disabled = false;
-        document.body.classList.remove('scanning-active');
-        sse.close();
+    function startAnalysis() {
+      const asset = document.getElementById('assetInput').value.trim().toUpperCase();
+      if (!asset) {
+        document.getElementById('assetInput').focus();
+        return;
       }
-    };
 
-    sse.onerror = () => {
-      addLog('error', '❌', '<span class="error-text">Network connection interrupted</span>');
-      setStatus('OFFLINE', false);
-      document.getElementById('analyzeBtn').disabled = false;
-      document.body.classList.remove('scanning-active');
-      sse.close();
-    };
-  }
+      if (currentSSE) {
+        currentSSE.close();
+        currentSSE = null;
+      }
 
-  function runDemoScan(asset) {
-    const steps = [
-      { tool: 'search_web', input: `canonical name and sources for ${asset}` },
-      { tool: 'search_web', input: `${asset} exploit news last 24h` },
-      { tool: 'scrape_url', input: `https://coindesk.com/${asset.toLowerCase()}-security-update` },
-      { tool: 'browser_scrape', input: `https://twitter.com/PeckShield` }
-    ];
+      resetPipeline();
+      document.getElementById('analyzeBtn').disabled = true;
+      setStatus(`INITIALIZING SCAN: ${asset}...`);
+      addHistory(asset, 'SCAN_REQUESTED');
 
-    let stepIdx = 0;
-    const interval = setInterval(() => {
-      if (stepIdx < steps.length) {
-        const step = steps[stepIdx];
-        addLog('tool_call', '🔍', `<span class="tool-name">${step.tool}</span> <span class="tool-input">"${step.input}"</span>`);
-        setStatus(`${step.tool.toUpperCase()}: ${step.input}`, true);
+      if (isDemoMode) {
+        runDemoScan(asset);
+        return;
+      }
 
+      const url = `/stream?asset=${encodeURIComponent(asset)}`;
+      const sse = new EventSource(url);
+      currentSSE = sse;
+
+      sse.onmessage = (e) => {
+        let event;
+        try { event = JSON.parse(e.data); } catch { return; }
+
+        if (event.type === 'tool_call') {
+          handleToolCall(event);
+        } else if (event.type === 'tool_result') {
+          handleToolResult(event);
+        } else if (event.type === 'verdict') {
+          const v = event.verdict;
+
+          document.getElementById('block-synthesis').classList.add('verified');
+          document.getElementById('synthesis-progress').style.width = '100%';
+          document.getElementById('synthesis-status').textContent = 'DECISION_FINALIZED';
+
+          showVerdict(v);
+          setStatus(`SCAN COMPLETE`, false);
+          document.getElementById('analyzeBtn').disabled = false;
+          sse.close();
+        } else if (event.type === 'error') {
+          setStatus('SCAN_FAILED', false);
+          document.getElementById('analyzeBtn').disabled = false;
+          addHistory(asset, 'ERROR_INTERNAL');
+          sse.close();
+        }
+      };
+
+      sse.onerror = () => {
+        setStatus('OFFLINE', false);
+        document.getElementById('analyzeBtn').disabled = false;
+        sse.close();
+      };
+    }
+
+    function handleToolCall(event) {
+      const tool = event.tool;
+      const input = event.input ? JSON.stringify(event.input).toLowerCase() : '';
+
+      if (tool === 'search_web') {
+        if (input.includes('canonical') || input.includes('official') || input.includes('name')) {
+          const block = document.getElementById('block-disambiguation');
+          block.classList.add('active');
+          document.getElementById('disambiguation-msg').textContent = 'Resolving asset identity...';
+          addHistory(document.getElementById('assetInput').value.toUpperCase(), 'DISAMBIGUATION_PENDING');
+        } else {
+          const block = document.getElementById('block-search');
+          block.classList.add('active');
+
+          if (input.includes('exploit') || input.includes('hack') || input.includes('attack')) {
+            block.classList.add('active-exploit');
+            document.getElementById('vector-exploit').className = 'w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse';
+          }
+          if (input.includes('sec') || input.includes('enforcement') || input.includes('regulatory')) {
+            block.classList.add('active-sec');
+            document.getElementById('vector-sec').className = 'w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse';
+          }
+          if (input.includes('flash loan') || input.includes('defi exploit') || input.includes('liquidity')) {
+            block.classList.add('active-flash');
+            document.getElementById('vector-flash').className = 'w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse';
+          }
+          addHistory(document.getElementById('assetInput').value.toUpperCase(), 'SEARCH_VECTORS_ACTIVE');
+        }
+      } else if (tool === 'scrape_url' || tool === 'browser_scrape') {
+        const block = document.getElementById('block-scrape');
+        block.classList.add('active');
+
+        // Match source icons
+        const grid = document.getElementById('scrape-grid');
+        if (input.includes('coindesk')) grid.children[0].classList.remove('opacity-30');
+        if (input.includes('twitter') || input.includes('x.com')) grid.children[1].classList.remove('opacity-30');
+        if (input.includes('reddit')) grid.children[2].classList.remove('opacity-30');
+
+        addHistory(document.getElementById('assetInput').value.toUpperCase(), 'DEEP_SCRAPE_INIT');
+      }
+    }
+
+    function handleToolResult(event) {
+      // Logic to finalize blocks
+      const disambiguationMsg = document.getElementById('disambiguation-msg');
+      if (disambiguationMsg.textContent === 'Resolving asset identity...') {
+        document.getElementById('block-disambiguation').classList.replace('active', 'verified');
+        disambiguationMsg.textContent = 'IDENTITY_CONFIRMED: ' + document.getElementById('assetInput').value.toUpperCase();
+      }
+
+      const searchBlock = document.getElementById('block-search');
+      if (searchBlock.classList.contains('active-exploit')) {
+        searchBlock.classList.replace('active-exploit', 'done-exploit');
+        document.getElementById('vector-exploit').className = 'w-1.5 h-1.5 rounded-full bg-green-500';
+      }
+      if (searchBlock.classList.contains('active-sec')) {
+        searchBlock.classList.replace('active-sec', 'done-sec');
+        document.getElementById('vector-sec').className = 'w-1.5 h-1.5 rounded-full bg-green-500';
+      }
+      if (searchBlock.classList.contains('active-flash')) {
+        searchBlock.classList.replace('active-flash', 'done-flash');
+        document.getElementById('vector-flash').className = 'w-1.5 h-1.5 rounded-full bg-green-500';
+      }
+
+      // If all searches done, mark block verified
+      if (searchBlock.classList.contains('done-exploit') || searchBlock.classList.contains('done-sec') || searchBlock.classList.contains('done-flash')) {
+         // Optionally mark block verified if certain condition met
+         // searchBlock.classList.add('verified');
+      }
+
+      // Synthesis starts after some results
+      const synthBlock = document.getElementById('block-synthesis');
+      if (!synthBlock.classList.contains('active')) {
+        synthBlock.classList.add('active');
+        document.getElementById('synthesis-status').textContent = 'SYNTHESIZING_VECTORS...';
+        document.getElementById('synthesis-progress').style.width = '40%';
+      }
+    }
+
+    function runDemoScan(asset) {
+      setTimeout(() => {
+        handleToolCall({ tool: 'search_web', input: { query: 'canonical name for ' + asset } });
         setTimeout(() => {
-           addLog('tool_result', '✅', `<span class="result-preview">Data packet received for ${asset} analysis...</span>`);
-        }, 800);
+          handleToolResult({});
+          handleToolCall({ tool: 'search_web', input: { query: asset + ' exploit news' } });
+          handleToolCall({ tool: 'search_web', input: { query: asset + ' sec enforcement' } });
+          setTimeout(() => {
+            handleToolResult({});
+            handleToolCall({ tool: 'scrape_url', input: { url: 'https://coindesk.com/' + asset } });
+            setTimeout(() => {
+              handleToolResult({});
+              const level = Math.random() > 0.5 ? 'CRITICAL' : 'NOMINAL';
+              const v = {
+                asset: asset,
+                threatLevel: level,
+                riskAction: level === 'CRITICAL' ? 'HOLD' : 'CLEAR',
+                confidenceScore: level === 'CRITICAL' ? 92 : 12,
+                summary: `Demo mode analysis completed for ${asset}. This is simulated data for visualization purposes.`,
+                riskReason: level === 'CRITICAL' ? `Critical threat detected: Flash loan exploit on major ${asset} DeFi protocol confirmed.` : `No significant threats detected for ${asset} in the last 24 hours.`,
+                timestamp: new Date().toISOString(),
+                evidence: [
+                  { title: 'Security Alert ' + asset, url: '#' },
+                  { title: 'Market Sentiment', url: '#' }
+                ]
+              };
+              document.getElementById('block-synthesis').classList.add('verified');
+              document.getElementById('synthesis-progress').style.width = '100%';
+              document.getElementById('synthesis-status').textContent = 'DECISION_FINALIZED';
+              showVerdict(v);
+              setStatus(`SCAN COMPLETE`, false);
+              document.getElementById('analyzeBtn').disabled = false;
+            }, 1500);
+          }, 1500);
+        }, 1500);
+      }, 500);
+    }
 
-        stepIdx++;
-      } else {
-        clearInterval(interval);
-        const levels = ['CRITICAL', 'ELEVATED', 'NOMINAL'];
-        const actions = ['HOLD', 'MONITOR', 'CLEAR'];
-        const idx = Math.floor(Math.random() * 3);
-        const level = levels[idx];
-        const action = actions[idx];
-        const score = level === 'CRITICAL' ? 90 + Math.floor(Math.random()*10) : (level === 'ELEVATED' ? 60 + Math.floor(Math.random()*20) : 10 + Math.floor(Math.random()*20));
-
-        const v = {
-          asset: asset,
-          threatLevel: level,
-          riskAction: action,
-          confidenceScore: score,
-          summary: `Demo mode analysis completed for ${asset}. This is simulated data for visualization purposes.`,
-          riskReason: `Simulated reasoning for ${level} threat level.`,
-          brightDataCallsUsed: 4,
-          timestamp: new Date().toISOString(),
-          evidence: [
-            { title: 'Simulated Security Report', url: '#' },
-            { title: 'Social Sentiment Analysis', url: '#' }
-          ]
-        };
-
-        addLog('verdict', '📊', `<span class="verdict-text">${level} → ${action}</span> — SCAN COMPLETE`);
-        showVerdict(v);
-        setStatus(`ANALYSIS COMPLETE: ${level}`, false);
-        document.getElementById('analyzeBtn').disabled = false;
-        document.body.classList.remove('scanning-active');
-      }
-    }, 1500);
-  }
-
-  document.getElementById('assetInput').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') startAnalysis();
-  });
-</script>
-
+    document.getElementById('assetInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') startAnalysis();
+    });
+  </script>
 </body>
 </html>
