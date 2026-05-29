@@ -1,0 +1,13 @@
+
+> sentinel-web-oracle@0.1.0 dev
+> ts-node src/index.ts
+
+(node:32330) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[DB] Database initialized
+[Monitor] Restoring 0 active monitors
+🛡️  Sentinel Web Oracle running on port 3008
+   UI → http://localhost:3008
+   API → POST http://localhost:3008/analyze
+   SSE → GET  http://localhost:3008/stream?asset=BTC
+Terminated
