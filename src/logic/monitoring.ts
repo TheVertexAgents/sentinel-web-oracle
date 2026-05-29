@@ -164,10 +164,13 @@ export async function runAnalyisAndTrack(
   });
 
   // Final broadcast
-  broadcastToFeed({
+  const finalEvent: AgentEvent = {
     type: 'verdict',
     verdict: fullVerdict
-  });
+  };
+
+  if (emit) emit(finalEvent);
+  broadcastToFeed(finalEvent);
 
   return fullVerdict;
 }

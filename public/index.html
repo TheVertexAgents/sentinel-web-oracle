@@ -335,8 +335,8 @@
            </div>
            <!-- SVG Line Chart Mock -->
            <svg class="w-full h-full text-cyan-500/60 relative z-10" viewBox="0 0 200 60" preserveAspectRatio="none">
-             <path d="M0,50 Q20,20 40,45 T80,30 T120,55 T160,10 T200,40" fill="none" stroke="currentColor" stroke-width="1.5"></path>
-             <path d="M0,50 Q20,20 40,45 T80,30 T120,55 T160,10 T200,40 L200,60 L0,60 Z" fill="url(#grad)" stroke="none"></path>
+             <path id="network-path" d="M0,50 Q20,20 40,45 T80,30 T120,55 T160,10 T200,40" fill="none" stroke="currentColor" stroke-width="1.5"></path>
+             <path id="network-fill" d="M0,50 Q20,20 40,45 T80,30 T120,55 T160,10 T200,40 L200,60 L0,60 Z" fill="url(#grad)" stroke="none"></path>
              <defs>
                <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
                  <stop offset="0%" style="stop-color:currentColor;stop-opacity:0.3" />
@@ -356,18 +356,18 @@
           <!-- SVG Map Mock -->
           <svg class="w-full h-full opacity-70" viewBox="0 0 200 100">
             <path d="M30,30 L40,25 L50,30 L60,25 L70,30 L80,35 L90,30 L100,25 L110,30 L120,35 L130,30 L140,25 L150,30 L160,25 L170,30 M20,50 L180,50 M30,70 L170,70" stroke="#484f58" stroke-width="0.8" fill="none"></path>
-            <circle cx="45" cy="35" r="2" fill="#ef4444" class="animate-pulse"></circle>
-            <circle cx="155" cy="45" r="2" fill="#00f2fe" class="animate-pulse"></circle>
-            <circle cx="100" cy="65" r="2" fill="#f59e0b" class="animate-pulse"></circle>
-            <circle cx="80" cy="25" r="2" fill="#00f2fe" class="animate-pulse"></circle>
+            <circle id="node-eu" cx="45" cy="35" r="2" fill="#484f58" class="transition-all duration-500"></circle>
+            <circle id="node-us" cx="155" cy="45" r="2" fill="#484f58" class="transition-all duration-500"></circle>
+            <circle id="node-asia" cx="100" cy="65" r="2" fill="#484f58" class="transition-all duration-500"></circle>
+            <circle id="node-generic" cx="80" cy="25" r="2" fill="#484f58" class="transition-all duration-500"></circle>
           </svg>
           <div class="absolute bottom-2 left-2 flex flex-col gap-1">
              <div class="flex items-center gap-1">
-                <div class="w-1 h-1 rounded-full bg-cyan-500"></div>
+                <div class="w-1 h-1 rounded-full bg-cyan-500" id="dot-us"></div>
                 <span class="text-[7px] font-mono text-slate-500">US_EAST_01</span>
              </div>
              <div class="flex items-center gap-1">
-                <div class="w-1 h-1 rounded-full bg-threat"></div>
+                <div class="w-1 h-1 rounded-full bg-threat" id="dot-eu"></div>
                 <span class="text-[7px] font-mono text-slate-500">EU_WEST_04</span>
              </div>
           </div>
@@ -393,6 +393,55 @@
     let charts = {
       riskGauge: null
     };
+
+    // Pipeline state machine
+    let pipelineState = {
+      disambiguation: 'idle',
+      search: 'idle',
+      scrape: 'idle',
+      synthesis: 'idle',
+      nodes: { exploit: 'idle', sec: 'idle', flash: 'idle' },
+      unlocked: new Set(),
+      lastHistoryAsset: '',
+      lastHistoryAction: ''
+    };
+
+    // Network Chart Animation
+    let networkPhase = 0;
+    let networkIntensity = 5;
+    let targetIntensity = 5;
+
+    function animateNetwork() {
+      networkPhase += 0.05;
+      networkIntensity += (targetIntensity - networkIntensity) * 0.05;
+
+      const path = document.getElementById('network-path');
+      const fill = document.getElementById('network-fill');
+      if (!path) return;
+
+      let pts = [];
+      for(let x=0; x<=200; x+=10) {
+        let y = 35 + Math.sin(networkPhase + x*0.05) * networkIntensity;
+        if (x % 20 === 0) y += Math.cos(networkPhase * 1.2 + x * 0.1) * (networkIntensity * 0.4);
+        pts.push(`${x},${y}`);
+      }
+      const d = `M${pts.join(' L')}`;
+      path.setAttribute('d', d);
+      fill.setAttribute('d', d + ' L200,60 L0,60 Z');
+      requestAnimationFrame(animateNetwork);
+    }
+    animateNetwork();
+
+    function pulseMap(nodeId) {
+      const el = document.getElementById(nodeId);
+      if (!el) return;
+      el.setAttribute('fill', nodeId === 'node-eu' ? '#ef4444' : '#00f2fe');
+      el.setAttribute('r', '4');
+      setTimeout(() => {
+        el.setAttribute('fill', '#484f58');
+        el.setAttribute('r', '2');
+      }, 2000);
+    }
 
     function toggleDemo() {
       isDemoMode = !isDemoMode;
@@ -450,6 +499,10 @@
     }
 
     function addHistory(asset, action) {
+      if (asset === pipelineState.lastHistoryAsset && action === pipelineState.lastHistoryAction) return;
+      pipelineState.lastHistoryAsset = asset;
+      pipelineState.lastHistoryAction = action;
+
       const log = document.getElementById('historyLog');
       const entry = document.createElement('div');
       entry.className = 'flex items-center gap-2 py-2 px-3 rounded bg-black/20 border border-white/5 animate-fade-in text-xs font-mono';
@@ -486,6 +539,18 @@
     }
 
     function resetPipeline() {
+      pipelineState = {
+        disambiguation: 'idle',
+        search: 'idle',
+        scrape: 'idle',
+        synthesis: 'idle',
+        nodes: { exploit: 'idle', sec: 'idle', flash: 'idle' },
+        unlocked: new Set(),
+        lastHistoryAsset: '',
+        lastHistoryAction: ''
+      };
+      targetIntensity = 5;
+
       const blocks = ['disambiguation', 'search', 'scrape', 'synthesis'];
       blocks.forEach(b => {
         const el = document.getElementById(`block-${b}`);
@@ -622,13 +687,15 @@
         } else if (event.type === 'verdict') {
           const v = event.verdict;
 
-          document.getElementById('block-synthesis').classList.add('verified');
+          pipelineState.synthesis = 'completed';
+          document.getElementById('block-synthesis').classList.replace('active', 'verified');
           document.getElementById('synthesis-progress').style.width = '100%';
           document.getElementById('synthesis-status').textContent = 'DECISION_FINALIZED';
 
-      v.summary = v.summary.replace('This is simulated data for visualization purposes.', '<br><span class="text-xs text-slate-400 font-normal">Simulated environment data.</span>');
+          v.summary = v.summary.replace('This is simulated data for visualization purposes.', '<br><span class="text-xs text-slate-400 font-normal">Simulated environment data.</span>');
           showVerdict(v);
           setStatus(`SCAN COMPLETE`, false);
+          targetIntensity = 5;
           document.getElementById('analyzeBtn').disabled = false;
           sse.close();
         } else if (event.type === 'error') {
@@ -649,79 +716,131 @@
     function handleToolCall(event) {
       const tool = event.tool;
       const input = event.input ? JSON.stringify(event.input).toLowerCase() : '';
+      const asset = document.getElementById('assetInput').value.toUpperCase();
+
+      targetIntensity = 15;
 
       if (tool === 'search_web') {
         if (input.includes('canonical') || input.includes('official') || input.includes('name')) {
-          const block = document.getElementById('block-disambiguation');
-          block.classList.add('active');
-          document.getElementById('disambiguation-msg').textContent = 'RESOLVING_IDENTITY...';
-          addHistory(document.getElementById('assetInput').value.toUpperCase(), 'DISAMBIGUATION_PENDING');
+          if (pipelineState.disambiguation === 'idle') {
+            pipelineState.disambiguation = 'active';
+            const block = document.getElementById('block-disambiguation');
+            block.classList.add('active');
+            document.getElementById('disambiguation-msg').textContent = 'RESOLVING_IDENTITY...';
+            addHistory(asset, 'IDENTITY_RESOLVING');
+          }
         } else {
-          const block = document.getElementById('block-search');
-          block.classList.add('active');
+          if (pipelineState.search === 'idle') {
+            pipelineState.search = 'active';
+            document.getElementById('block-search').classList.add('active');
+            addHistory(asset, 'THREAT_SEARCH_STARTED');
+          }
 
           if (input.includes('exploit') || input.includes('hack') || input.includes('attack')) {
-            block.classList.add('active-exploit');
+            pipelineState.nodes.exploit = 'active';
+            document.getElementById('block-search').classList.add('active-exploit');
             document.getElementById('icon-exploit').textContent = '🔍';
           }
           if (input.includes('sec') || input.includes('enforcement') || input.includes('regulatory')) {
-            block.classList.add('active-sec');
+            pipelineState.nodes.sec = 'active';
+            document.getElementById('block-search').classList.add('active-sec');
             document.getElementById('icon-sec').textContent = '🔍';
           }
           if (input.includes('flash loan') || input.includes('defi exploit') || input.includes('liquidity')) {
-            block.classList.add('active-flash');
+            pipelineState.nodes.flash = 'active';
+            document.getElementById('block-search').classList.add('active-flash');
             document.getElementById('icon-flash').textContent = '🔍';
           }
-          addHistory(document.getElementById('assetInput').value.toUpperCase(), 'SEARCH_VECTORS_ACTIVE');
         }
       } else if (tool === 'scrape_url' || tool === 'browser_scrape') {
-        const block = document.getElementById('block-scrape');
-        block.classList.add('active');
+        if (pipelineState.scrape === 'idle') {
+          pipelineState.scrape = 'active';
+          document.getElementById('block-scrape').classList.add('active');
+          addHistory(asset, 'DEEP_SCRAPE_STARTED');
+        }
+
+        const nodeId = input.includes('eu') ? 'node-eu' : (input.includes('us') ? 'node-us' : (input.includes('asia') ? 'node-asia' : 'node-generic'));
+        pulseMap(nodeId);
 
         // Match source icons
         const grid = document.getElementById('scrape-grid');
-        const unlock = (idx) => {
-           grid.children[idx].classList.remove('opacity-20', 'grayscale');
+        const unlock = (idx, name) => {
+           grid.children[idx].classList.remove('opacity-30', 'grayscale');
            grid.children[idx].querySelector('.status-lock').textContent = '🔓';
            grid.children[idx].querySelector('.status-lock').classList.add('text-green-400');
+           pipelineState.unlocked.add(name);
+
+           if (pipelineState.unlocked.size === 3 && pipelineState.scrape !== 'completed') {
+             pipelineState.scrape = 'completed';
+             document.getElementById('block-scrape').classList.replace('active', 'verified');
+             addHistory(asset, 'DEEP_SCRAPE_COMPLETED');
+           }
         };
 
-        if (input.includes('coindesk')) unlock(0);
-        if (input.includes('twitter') || input.includes('x.com')) unlock(1);
-        if (input.includes('reddit')) unlock(2);
+        if (input.includes('coindesk')) unlock(0, 'coindesk');
+        if (input.includes('twitter') || input.includes('x.com')) unlock(1, 'twitter');
+        if (input.includes('reddit')) unlock(2, 'reddit');
+      } else if (tool === 'synthesis') {
+         // Auto-complete previous steps if they were active
+         if (pipelineState.disambiguation === 'active') handleToolResult({});
+         if (pipelineState.search === 'active') {
+             pipelineState.nodes.exploit = 'completed';
+             pipelineState.nodes.sec = 'completed';
+             pipelineState.nodes.flash = 'completed';
+             handleToolResult({});
+         }
+         if (pipelineState.scrape === 'active' && pipelineState.scrape !== 'completed') {
+             pipelineState.scrape = 'completed';
+             document.getElementById('block-scrape').classList.replace('active', 'verified');
+             addHistory(asset, 'DEEP_SCRAPE_COMPLETED');
+         }
 
-        addHistory(document.getElementById('assetInput').value.toUpperCase(), 'DEEP_SCRAPE_INIT');
+         if (pipelineState.synthesis === 'idle') {
+            pipelineState.synthesis = 'active';
+            const synthBlock = document.getElementById('block-synthesis');
+            synthBlock.classList.add('active');
+            document.getElementById('synthesis-status').textContent = 'SYNTHESIZING...';
+            document.getElementById('synthesis-progress').style.width = '60%';
+            addHistory(asset, 'SYNTHESIS_ACTIVE');
+         }
       }
     }
 
     function handleToolResult(event) {
+      const asset = document.getElementById('assetInput').value.toUpperCase();
+
       // Logic to finalize blocks
-      const disambiguationMsg = document.getElementById('disambiguation-msg');
-      if (disambiguationMsg.textContent === 'RESOLVING_IDENTITY...') {
+      if (pipelineState.disambiguation === 'active') {
+        pipelineState.disambiguation = 'verified';
         document.getElementById('block-disambiguation').classList.replace('active', 'verified');
-        disambiguationMsg.textContent = 'IDENTITY_CONFIRMED: ' + document.getElementById('assetInput').value.toUpperCase();
+        document.getElementById('disambiguation-msg').textContent = 'IDENTITY_CONFIRMED: ' + asset;
+        addHistory(asset, 'IDENTITY_CONFIRMED');
       }
 
       const searchBlock = document.getElementById('block-search');
-      if (searchBlock.classList.contains('active-exploit')) {
+      if (pipelineState.nodes.exploit === 'active') {
+        pipelineState.nodes.exploit = 'completed';
         searchBlock.classList.replace('active-exploit', 'done-exploit');
         document.getElementById('icon-exploit').textContent = '✅';
       }
-      if (searchBlock.classList.contains('active-sec')) {
+      if (pipelineState.nodes.sec === 'active') {
+        pipelineState.nodes.sec = 'completed';
         searchBlock.classList.replace('active-sec', 'done-sec');
         document.getElementById('icon-sec').textContent = '✅';
       }
-      if (searchBlock.classList.contains('active-flash')) {
+      if (pipelineState.nodes.flash === 'active') {
+        pipelineState.nodes.flash = 'completed';
         searchBlock.classList.replace('active-flash', 'done-flash');
         document.getElementById('icon-flash').textContent = '✅';
       }
 
-      // Synthesis starts after some results
-      const synthBlock = document.getElementById('block-synthesis');
-      if (!synthBlock.classList.contains('active')) {
-        synthBlock.classList.add('active');
-        document.getElementById('synthesis-status').textContent = 'SYNTHESIZING...';
-        document.getElementById('synthesis-progress').style.width = '40%';
+      if (pipelineState.search === 'active' &&
+          pipelineState.nodes.exploit === 'completed' &&
+          pipelineState.nodes.sec === 'completed' &&
+          pipelineState.nodes.flash === 'completed') {
+        pipelineState.search = 'completed';
+        searchBlock.classList.add('verified');
+        addHistory(asset, 'THREAT_SEARCH_COMPLETED');
       }
     }
 
@@ -732,32 +851,40 @@
           handleToolResult({});
           handleToolCall({ tool: 'search_web', input: { query: asset + ' exploit news' } });
           handleToolCall({ tool: 'search_web', input: { query: asset + ' sec enforcement' } });
+          handleToolCall({ tool: 'search_web', input: { query: asset + ' flash loan' } });
           setTimeout(() => {
             handleToolResult({});
             handleToolCall({ tool: 'scrape_url', input: { url: 'https://coindesk.com/' + asset } });
+            handleToolCall({ tool: 'scrape_url', input: { url: 'https://twitter.com/' + asset } });
+            handleToolCall({ tool: 'scrape_url', input: { url: 'https://reddit.com/' + asset } });
             setTimeout(() => {
-              handleToolResult({});
-              const level = Math.random() > 0.5 ? 'CRITICAL' : 'NOMINAL';
-              const v = {
-                asset: asset,
-                threatLevel: level,
-                riskAction: level === 'CRITICAL' ? 'HOLD' : 'CLEAR',
-                confidenceScore: level === 'CRITICAL' ? 92 : 12,
-                summary: `Demo mode analysis completed for ${asset}. This is simulated data for visualization purposes.`,
-                riskReason: level === 'CRITICAL' ? `Critical threat detected: Flash loan exploit on major ${asset} DeFi protocol confirmed.` : `No significant threats detected for ${asset} in the last 24 hours.`,
-                timestamp: new Date().toISOString(),
-                evidence: [
-                  { title: 'Security Alert ' + asset, url: '#' },
-                  { title: 'Market Sentiment', url: '#' }
-                ]
-              };
-              document.getElementById('block-synthesis').classList.add('verified');
-              document.getElementById('synthesis-progress').style.width = '100%';
-              document.getElementById('synthesis-status').textContent = 'DECISION_FINALIZED';
-              v.summary = v.summary.replace('This is simulated data for visualization purposes.', '<br><span class="text-xs text-slate-400 font-normal">Simulated environment data.</span>');
-              showVerdict(v);
-              setStatus(`SCAN COMPLETE`, false);
-              document.getElementById('analyzeBtn').disabled = false;
+              handleToolCall({ tool: 'synthesis' });
+              setTimeout(() => {
+                const level = Math.random() > 0.5 ? 'CRITICAL' : 'NOMINAL';
+                const v = {
+                  asset: asset,
+                  threatLevel: level,
+                  riskAction: level === 'CRITICAL' ? 'HOLD' : 'CLEAR',
+                  confidenceScore: level === 'CRITICAL' ? 92 : 12,
+                  summary: `Demo mode analysis completed for ${asset}. This is simulated data for visualization purposes.`,
+                  riskReason: level === 'CRITICAL' ? `Critical threat detected: Flash loan exploit on major ${asset} DeFi protocol confirmed.` : `No significant threats detected for ${asset} in the last 24 hours.`,
+                  timestamp: new Date().toISOString(),
+                  evidence: [
+                    { title: 'Security Alert ' + asset, url: '#' },
+                    { title: 'Market Sentiment', url: '#' }
+                  ]
+                };
+
+                pipelineState.synthesis = 'completed';
+                document.getElementById('block-synthesis').classList.replace('active', 'verified');
+                document.getElementById('synthesis-progress').style.width = '100%';
+                document.getElementById('synthesis-status').textContent = 'DECISION_FINALIZED';
+                v.summary = v.summary.replace('This is simulated data for visualization purposes.', '<br><span class="text-xs text-slate-400 font-normal">Simulated environment data.</span>');
+                showVerdict(v);
+                setStatus(`SCAN COMPLETE`, false);
+                targetIntensity = 5;
+                document.getElementById('analyzeBtn').disabled = false;
+              }, 1500);
             }, 1500);
           }, 1500);
         }, 1500);

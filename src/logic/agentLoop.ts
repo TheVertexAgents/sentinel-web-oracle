@@ -186,6 +186,10 @@ Follow this process:
     response = await llm.chat(SYSTEM_PROMPT, messages, tools);
   }
 
+  if (emit) {
+    emit({ type: 'tool_call', tool: 'synthesis' });
+  }
+
   const jsonMatch = response.text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
     return {
