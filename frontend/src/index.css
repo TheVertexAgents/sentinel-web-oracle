@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@theme {
+  --color-obsidian: #0d1117;
+  --color-panel: #161b22;
+  --color-cyan-500: #00f2fe;
+  --color-threat: #ef4444;
+
+  --shadow-cyber: 0 0 15px rgba(0, 242, 254, 0.15);
+  --shadow-cyber-red: 0 0 20px rgba(239, 68, 68, 0.3);
+
+  --font-mono: "JetBrains Mono", monospace;
+  --font-sans: "Inter", sans-serif;
+
+  @keyframes ticker {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+}
+
+@layer components {
+  .cyber-border {
+    @apply border border-cyan-500/20 shadow-cyber hover:border-cyan-500/40 transition-all duration-300;
+  }
+  .panel-bg {
+    @apply bg-panel rounded-lg overflow-hidden;
+  }
+  .neon-text-cyan {
+    text-shadow: 0 0 10px rgba(0, 242, 254, 0.5);
+  }
+  .neon-text-red {
+    text-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+  }
+}
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: dark;
+  background-color: #0d1117;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+  overflow: hidden;
+}
