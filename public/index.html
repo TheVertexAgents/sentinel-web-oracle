@@ -173,12 +173,14 @@
         </div>
 
         <div class="flex-1 p-6 flex flex-col gap-6 relative overflow-y-auto">
-          <!-- Flow Edges (Visual) -->
-          <div class="absolute left-1/2 top-10 bottom-10 w-0.5 bg-gradient-to-b from-cyan-500/50 via-cyan-500/10 to-cyan-500/50 -translate-x-1/2 hidden md:block z-0"></div>
+          <!-- Flow Edges (Visual Connectors) -->
+          <div class="absolute left-1/2 top-24 h-6 w-px bg-cyan-500/30 -translate-x-1/2 z-0"></div>
+          <div class="absolute left-1/2 top-[244px] h-6 w-px bg-cyan-500/30 -translate-x-1/2 z-0"></div>
+          <div class="absolute left-1/2 top-[392px] h-6 w-px bg-cyan-500/30 -translate-x-1/2 z-0"></div>
 
           <!-- DISAMBIGUATION Block -->
           <div id="block-disambiguation" class="relative z-10 flex flex-col items-center group">
-            <div class="bg-panel border border-cyan-500/30 p-4 rounded-lg w-full max-w-md transition-all group-[.active]:border-cyan-500 group-[.active]:shadow-cyber group-[.verified]:border-green-500/50">
+            <div class="bg-panel border border-cyan-500/30 p-4 rounded-lg w-full max-w-md transition-all group-[.active]:border-cyan-500 group-[.active]:shadow-cyber group-[.active]:animate-pulse-fast group-[.verified]:border-green-500/50">
               <div class="flex items-center justify-between mb-2">
                 <span class="text-[10px] font-mono text-cyan-500/60 uppercase">Step 01 // Disambiguation</span>
                 <span class="status-icon text-xs">🔍</span>
@@ -192,7 +194,7 @@
 
           <!-- MULTI-SEARCH Block -->
           <div id="block-search" class="relative z-10 flex flex-col items-center group">
-            <div class="bg-panel border border-cyan-500/30 p-4 rounded-lg w-full transition-all group-[.active]:border-cyan-500 group-[.active]:shadow-cyber group-[.verified]:border-green-500/50">
+            <div class="bg-panel border border-cyan-500/30 p-4 rounded-lg w-full transition-all group-[.active]:border-cyan-500 group-[.active]:shadow-cyber group-[.active]:animate-pulse-fast group-[.verified]:border-green-500/50">
               <div class="flex items-center justify-between mb-4">
                 <span class="text-[10px] font-mono text-cyan-500/60 uppercase">Step 02 // Multi-Vector Search</span>
                 <div class="flex gap-1">
@@ -220,23 +222,26 @@
 
           <!-- DEEP SCRAPE Block -->
           <div id="block-scrape" class="relative z-10 flex flex-col items-center group">
-            <div class="bg-panel border border-cyan-500/30 p-4 rounded-lg w-full max-w-md transition-all group-[.active]:border-cyan-500 group-[.active]:shadow-cyber group-[.verified]:border-green-500/50">
+            <div class="bg-panel border border-cyan-500/30 p-4 rounded-lg w-full max-w-md transition-all group-[.active]:border-cyan-500 group-[.active]:shadow-cyber group-[.active]:animate-pulse-fast group-[.verified]:border-green-500/50">
               <div class="flex items-center justify-between mb-3">
                 <span class="text-[10px] font-mono text-cyan-500/60 uppercase">Step 03 // Deep Scrape Analysis</span>
                 <span class="text-[10px] font-mono text-slate-500">WEB UNLOCKER</span>
               </div>
               <div class="grid grid-cols-3 gap-2" id="scrape-grid">
-                <div class="bg-obsidian p-2 rounded border border-slate-800/50 flex flex-col items-center gap-1 opacity-30 transition-all hover:opacity-100 cursor-help" title="Coindesk">
-                  <div class="text-lg">📰</div>
-                  <div class="text-[8px] font-mono text-slate-500">COINDESK</div>
+                <div class="bg-obsidian/40 p-3 rounded border border-slate-800 flex flex-col items-center gap-2 opacity-20 grayscale transition-all hover:opacity-100 hover:grayscale-0 cursor-help w-full overflow-hidden relative group/card" title="Coindesk">
+                  <div class="text-xl">📰</div>
+                  <div class="text-[9px] font-mono text-slate-400 tracking-tighter truncate w-full text-center">COINDESK</div>
+                  <div class="absolute top-1 right-1 text-[8px] status-lock">🔒</div>
                 </div>
-                <div class="bg-obsidian p-2 rounded border border-slate-800/50 flex flex-col items-center gap-1 opacity-30 transition-all hover:opacity-100 cursor-help" title="X / Twitter">
-                  <div class="text-lg">𝕏</div>
-                  <div class="text-[8px] font-mono text-slate-500">X_STREAM</div>
+                <div class="bg-obsidian/40 p-3 rounded border border-slate-800 flex flex-col items-center gap-2 opacity-20 grayscale transition-all hover:opacity-100 hover:grayscale-0 cursor-help w-full overflow-hidden relative group/card" title="X / Twitter">
+                  <div class="text-xl">𝕏</div>
+                  <div class="text-[9px] font-mono text-slate-400 tracking-tighter truncate w-full text-center">X_STREAM</div>
+                  <div class="absolute top-1 right-1 text-[8px] status-lock">🔒</div>
                 </div>
-                <div class="bg-obsidian p-2 rounded border border-slate-800/50 flex flex-col items-center gap-1 opacity-30 transition-all hover:opacity-100 cursor-help" title="Reddit">
-                  <div class="text-lg">🤖</div>
-                  <div class="text-[8px] font-mono text-slate-500">REDDIT</div>
+                <div class="bg-obsidian/40 p-3 rounded border border-slate-800 flex flex-col items-center gap-2 opacity-20 grayscale transition-all hover:opacity-100 hover:grayscale-0 cursor-help w-full overflow-hidden relative group/card" title="Reddit">
+                  <div class="text-xl">🤖</div>
+                  <div class="text-[9px] font-mono text-slate-400 tracking-tighter truncate w-full text-center">REDDIT</div>
+                  <div class="absolute top-1 right-1 text-[8px] status-lock">🔒</div>
                 </div>
               </div>
             </div>
@@ -244,7 +249,7 @@
 
           <!-- SYNTHESIS Block -->
           <div id="block-synthesis" class="relative z-10 flex flex-col items-center group">
-            <div class="bg-panel border border-cyan-500/30 p-4 rounded-lg w-full max-w-md transition-all group-[.active]:border-cyan-500 group-[.active]:shadow-cyber group-[.verified]:border-green-500/50">
+            <div class="bg-panel border border-cyan-500/30 p-4 rounded-lg w-full max-w-md transition-all group-[.active]:border-cyan-500 group-[.active]:shadow-cyber group-[.active]:animate-pulse-fast group-[.verified]:border-green-500/50">
               <div class="flex items-center justify-between mb-2">
                 <span class="text-[10px] font-mono text-cyan-500/60 uppercase">Step 04 // Risk Synthesis</span>
                 <span class="text-[10px] font-mono text-slate-500">GROQ LLAMA-3.3-70B</span>
@@ -276,7 +281,7 @@
                 <span class="text-[8px] font-mono text-slate-500 -mt-1">THREAT SCORE</span>
               </div>
            </div>
-           <div class="flex-1">
+           <div class="flex-1 ml-6">
               <div class="flex items-center justify-between mb-2">
                 <div class="flex items-center gap-2">
                   <span id="threatBadge" class="px-2 py-0.5 rounded bg-slate-800 text-[10px] font-black tracking-widest uppercase">NOMINAL</span>
@@ -284,10 +289,10 @@
                 </div>
                 <span id="verdictAsset" class="text-xl font-black font-mono tracking-tighter">BITCOIN</span>
               </div>
-              <div class="text-slate-200 text-sm font-semibold mb-2 leading-tight" id="verdictSummary">
+              <div class="text-white text-lg font-bold mb-1 leading-tight" id="verdictSummary">
                 Scan your first asset to see the automated threat intelligence output here.
               </div>
-              <div class="text-slate-500 text-[11px] italic" id="verdictReason">
+              <div class="text-white text-xs opacity-90" id="verdictReason">
                 "No active scan telemetry detected."
               </div>
            </div>
@@ -312,13 +317,13 @@
         <div class="p-3 border-b border-cyan-500/20 bg-cyan-500/5">
           <h2 class="text-xs font-bold tracking-widest text-cyan-500 uppercase">Threat History</h2>
         </div>
-        <div class="flex-1 overflow-y-auto p-3 space-y-2 font-mono text-[10px]" id="historyLog">
+        <div class="flex-1 overflow-y-auto p-3 space-y-2" id="historyLog">
           <!-- History entries -->
-          <div class="flex items-center gap-2 p-2 rounded bg-black/20 border border-white/5">
-            <span class="text-slate-500">10:42Z</span>
-            <span class="font-bold text-cyan-500">ETH</span>
-            <span class="flex-1 text-slate-400 truncate">DISAMBIGUATION_START</span>
-            <div class="w-1.5 h-1.5 rounded-full bg-cyan-500"></div>
+          <div class="flex items-center gap-2 py-2 px-3 rounded bg-black/20 border border-white/5 text-xs font-mono">
+            <span class="text-slate-500 w-10">10:42Z</span>
+            <span class="font-bold text-cyan-500/80 w-8">ETH</span>
+            <span class="flex-1 text-slate-400 truncate uppercase">Disambiguation_Start</span>
+            <div class="w-1.5 h-1.5 rounded-full bg-cyan-500/50"></div>
           </div>
         </div>
       </div>
@@ -329,14 +334,27 @@
           <h2 class="text-[10px] font-bold tracking-widest text-slate-400 uppercase">Network Security</h2>
           <span class="text-[9px] font-mono text-green-500">LIVE_OPS</span>
         </div>
-        <div class="flex-1 p-2 flex items-center justify-center">
+        <div class="flex-1 p-2 flex items-center justify-center relative bg-black/40">
+           <!-- Grid Lines -->
+           <div class="absolute inset-0 flex flex-col justify-between p-2 opacity-10 pointer-events-none">
+              <div class="w-full h-px bg-slate-500"></div>
+              <div class="w-full h-px bg-slate-500"></div>
+              <div class="w-full h-px bg-slate-500"></div>
+              <div class="w-full h-px bg-slate-500"></div>
+           </div>
+           <div class="absolute inset-0 flex justify-between p-2 opacity-10 pointer-events-none">
+              <div class="h-full w-px bg-slate-500"></div>
+              <div class="h-full w-px bg-slate-500"></div>
+              <div class="h-full w-px bg-slate-500"></div>
+              <div class="h-full w-px bg-slate-500"></div>
+           </div>
            <!-- SVG Line Chart Mock -->
-           <svg class="w-full h-full text-cyan-500/30" viewBox="0 0 200 60" preserveAspectRatio="none">
+           <svg class="w-full h-full text-cyan-500/60 relative z-10" viewBox="0 0 200 60" preserveAspectRatio="none">
              <path d="M0,50 Q20,20 40,45 T80,30 T120,55 T160,10 T200,40" fill="none" stroke="currentColor" stroke-width="1.5"></path>
              <path d="M0,50 Q20,20 40,45 T80,30 T120,55 T160,10 T200,40 L200,60 L0,60 Z" fill="url(#grad)" stroke="none"></path>
              <defs>
                <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
-                 <stop offset="0%" style="stop-color:currentColor;stop-opacity:0.2" />
+                 <stop offset="0%" style="stop-color:currentColor;stop-opacity:0.3" />
                  <stop offset="100%" style="stop-color:currentColor;stop-opacity:0" />
                </linearGradient>
              </defs>
@@ -351,12 +369,12 @@
         </div>
         <div class="flex-1 p-2 relative bg-obsidian">
           <!-- SVG Map Mock -->
-          <svg class="w-full h-full opacity-40" viewBox="0 0 200 100">
-            <path d="M30,30 L40,25 L50,30 L60,25 L70,30 L80,35 L90,30 L100,25 L110,30 L120,35 L130,30 L140,25 L150,30 L160,25 L170,30 M20,50 L180,50 M30,70 L170,70" stroke="#30363d" stroke-width="0.5" fill="none"></path>
-            <circle cx="45" cy="35" r="1.5" fill="#ef4444" class="animate-pulse"></circle>
-            <circle cx="155" cy="45" r="1.5" fill="#00f2fe" class="animate-pulse"></circle>
-            <circle cx="100" cy="65" r="1.5" fill="#f59e0b" class="animate-pulse"></circle>
-            <circle cx="80" cy="25" r="1.5" fill="#00f2fe" class="animate-pulse"></circle>
+          <svg class="w-full h-full opacity-70" viewBox="0 0 200 100">
+            <path d="M30,30 L40,25 L50,30 L60,25 L70,30 L80,35 L90,30 L100,25 L110,30 L120,35 L130,30 L140,25 L150,30 L160,25 L170,30 M20,50 L180,50 M30,70 L170,70" stroke="#484f58" stroke-width="0.8" fill="none"></path>
+            <circle cx="45" cy="35" r="2" fill="#ef4444" class="animate-pulse"></circle>
+            <circle cx="155" cy="45" r="2" fill="#00f2fe" class="animate-pulse"></circle>
+            <circle cx="100" cy="65" r="2" fill="#f59e0b" class="animate-pulse"></circle>
+            <circle cx="80" cy="25" r="2" fill="#00f2fe" class="animate-pulse"></circle>
           </svg>
           <div class="absolute bottom-2 left-2 flex flex-col gap-1">
              <div class="flex items-center gap-1">
@@ -449,13 +467,28 @@
     function addHistory(asset, action) {
       const log = document.getElementById('historyLog');
       const entry = document.createElement('div');
-      entry.className = 'flex items-center gap-2 p-2 rounded bg-black/20 border border-white/5 animate-fade-in';
+      entry.className = 'flex items-center gap-2 py-2 px-3 rounded bg-black/20 border border-white/5 animate-fade-in text-xs font-mono';
       const time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }) + 'Z';
+
+      let dotColor = 'bg-cyan-500/50';
+      let statusPill = '';
+
+      if (action.includes('CRITICAL')) {
+        dotColor = 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]';
+        statusPill = '<span class="px-1.5 py-0.5 rounded-sm bg-red-900/30 text-red-500 text-[8px] font-bold">CRITICAL</span>';
+      } else if (action.includes('SCAN_COMPLETE')) {
+        dotColor = 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]';
+        statusPill = '<span class="px-1.5 py-0.5 rounded-sm bg-green-900/30 text-green-500 text-[8px] font-bold">ACTIVE</span>';
+      } else if (action.includes('ERROR')) {
+        dotColor = 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]';
+      }
+
       entry.innerHTML = `
-        <span class="text-slate-500">${time}</span>
-        <span class="font-bold text-cyan-500">${asset}</span>
-        <span class="flex-1 text-slate-400 truncate">${action}</span>
-        <div class="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-cyber"></div>
+        <span class="text-slate-500 w-10">${time}</span>
+        <span class="font-bold text-cyan-500/80 w-8">${asset}</span>
+        <span class="flex-1 text-slate-400 truncate uppercase">${action}</span>
+        ${statusPill}
+        <div class="w-1.5 h-1.5 rounded-full ${dotColor}"></div>
       `;
       log.prepend(entry);
     }
@@ -484,7 +517,7 @@
       document.getElementById('synthesis-progress').style.width = '0%';
       document.getElementById('synthesis-status').textContent = 'Awaiting evidence batch...';
 
-      document.querySelectorAll('#scrape-grid > div').forEach(div => div.classList.add('opacity-30'));
+      document.querySelectorAll('#scrape-grid > div').forEach(div => div.classList.add('opacity-20', 'grayscale'));
 
       document.getElementById('verdictCard').classList.add('hidden');
     }
@@ -541,7 +574,7 @@
       document.getElementById('verdictAsset').textContent = v.asset;
       document.getElementById('verdictAsset').className = `text-xl font-black font-mono tracking-tighter ${isCritical ? 'text-threat neon-text-red' : 'text-white'}`;
 
-      document.getElementById('verdictSummary').textContent = v.summary;
+      document.getElementById('verdictSummary').innerHTML = v.summary;
       document.getElementById('verdictReason').textContent = `"${v.riskReason}"`;
       document.getElementById('verdictTs').textContent = new Date(v.timestamp).toISOString().replace('T', ' ').substring(0, 19) + 'Z';
 
@@ -604,6 +637,7 @@
           document.getElementById('synthesis-progress').style.width = '100%';
           document.getElementById('synthesis-status').textContent = 'DECISION_FINALIZED';
 
+      v.summary = v.summary.replace('This is simulated data for visualization purposes.', '<br><span class="text-xs text-slate-400 font-normal">Simulated environment data.</span>');
           showVerdict(v);
           setStatus(`SCAN COMPLETE`, false);
           document.getElementById('analyzeBtn').disabled = false;
@@ -657,9 +691,15 @@
 
         // Match source icons
         const grid = document.getElementById('scrape-grid');
-        if (input.includes('coindesk')) grid.children[0].classList.remove('opacity-30');
-        if (input.includes('twitter') || input.includes('x.com')) grid.children[1].classList.remove('opacity-30');
-        if (input.includes('reddit')) grid.children[2].classList.remove('opacity-30');
+        const unlock = (idx) => {
+           grid.children[idx].classList.remove('opacity-20', 'grayscale');
+           grid.children[idx].querySelector('.status-lock').textContent = '🔓';
+           grid.children[idx].querySelector('.status-lock').classList.add('text-green-400');
+        };
+
+        if (input.includes('coindesk')) unlock(0);
+        if (input.includes('twitter') || input.includes('x.com')) unlock(1);
+        if (input.includes('reddit')) unlock(2);
 
         addHistory(document.getElementById('assetInput').value.toUpperCase(), 'DEEP_SCRAPE_INIT');
       }
@@ -731,6 +771,7 @@
               document.getElementById('block-synthesis').classList.add('verified');
               document.getElementById('synthesis-progress').style.width = '100%';
               document.getElementById('synthesis-status').textContent = 'DECISION_FINALIZED';
+              v.summary = v.summary.replace('This is simulated data for visualization purposes.', '<br><span class="text-xs text-slate-400 font-normal">Simulated environment data.</span>');
               showVerdict(v);
               setStatus(`SCAN COMPLETE`, false);
               document.getElementById('analyzeBtn').disabled = false;
