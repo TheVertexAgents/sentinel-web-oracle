@@ -13,7 +13,8 @@ dotenv.config();
 const app = express();
 app.use(express.json());
 
-// Serve the static UI from public/
+// Serve the static UI from frontend/dist (React) or fallback to public
+app.use(express.static(path.join(__dirname, '..', 'frontend', 'dist')));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // ── Health ────────────────────────────────────────────────────────────────────
