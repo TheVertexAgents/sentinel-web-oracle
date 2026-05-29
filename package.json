@@ -4,6 +4,7 @@
   "description": "Agentic crypto threat intelligence powered by Bright Data live web infrastructure",
   "main": "dist/index.js",
   "scripts": {
+    "postinstall": "cd frontend && npm install",
     "dev:backend": "ts-node src/index.ts",
     "dev:frontend": "cd frontend && npm run dev",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",

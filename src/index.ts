@@ -17,6 +17,15 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'frontend', 'dist')));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
+// Handle SPA routing - return index.html for all non-api routes
+app.get(/^(?!\/api|\/stream|\/health).*/, (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'frontend', 'dist', 'index.html'), (err) => {
+    if (err) {
+      res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+    }
+  });
+});
+
 // ── Health ────────────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', service: 'sentinel-web-oracle', port: config.server.port });
