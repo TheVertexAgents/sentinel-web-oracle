@@ -94,25 +94,27 @@ const PipelineFlow: React.FC = () => {
 
         {/* STEP 04 */}
         <div className={getBlockClass(pipeline.synthesis)}>
-          <div className="bg-panel border border-cyan-500/20 p-2 px-3 rounded flex items-center justify-between">
+          <div className={`bg-panel border border-cyan-500/20 p-2 px-3 rounded flex items-center justify-between transition-opacity duration-500 ${
+            pipeline.scrape === 'completed' || pipeline.scrape === 'verified' || pipeline.synthesis !== 'idle' ? 'opacity-100' : 'opacity-40'
+          }`}>
             <div className="flex items-center gap-3 flex-1">
               <span className="text-[8px] font-mono text-cyan-500/60 uppercase">Step 04</span>
               <div className="flex items-center gap-2 flex-1">
-                 <div className={`w-4 h-4 rounded-full border-2 border-slate-800 border-t-cyan-500 ${pipeline.synthesis === 'active' ? 'animate-spin' : ''}`}></div>
-                 <span className="text-[9px] font-mono text-slate-400 uppercase tracking-tighter w-24 truncate">
+                 <div className={`w-3 h-3 rounded-full border border-slate-800 border-t-cyan-500 ${pipeline.synthesis === 'active' ? 'animate-spin' : ''}`}></div>
+                 <span className="text-[9px] font-mono text-slate-400 uppercase tracking-tighter">
                    {pipeline.synthesis === 'idle' ? 'AWAITING_EVIDENCE...' :
-                    pipeline.synthesis === 'active' ? 'SYNTHESIZING...' : 'DECISION_FINALIZED'}
+                    pipeline.synthesis === 'active' ? 'RISK_SYNTHESIS' : 'DECISION_FINALIZED'}
                  </span>
-                 <div className="h-1 flex-1 bg-slate-800 rounded-full overflow-hidden max-w-[120px]">
+                 <div className="h-1 flex-1 bg-slate-800 rounded-full overflow-hidden max-w-[100px]">
                     <motion.div
                       className="h-full bg-cyan-500 w-0"
-                      animate={{ width: pipeline.synthesis === 'completed' ? '100%' : (pipeline.synthesis === 'active' ? '60%' : '0%') }}
-                      transition={{ duration: 1 }}
+                      animate={{ width: pipeline.synthesis === 'completed' ? '100%' : (pipeline.synthesis === 'active' ? '100%' : '0%') }}
+                      transition={{ duration: 2, ease: "linear" }}
                     />
                  </div>
               </div>
             </div>
-            <span className="text-[8px] font-mono text-slate-600">GROQ LLAMA-3.3-70B</span>
+            <span className="text-[8px] font-mono text-slate-600">LLAMA_3_PROCESSED</span>
           </div>
         </div>
       </div>

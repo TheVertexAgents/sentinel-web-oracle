@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState } from '../store';
 import {
@@ -13,8 +13,13 @@ import type { AgentEvent } from '../types';
 
 export const useScan = () => {
   const dispatch = useDispatch();
-  const { isDemoMode } = useSelector((state: RootState) => state.app);
+  const { isDemoMode, pipeline } = useSelector((state: RootState) => state.app);
   const sseRef = useRef<EventSource | null>(null);
+  const pipelineRef = useRef(pipeline);
+
+  useEffect(() => {
+    pipelineRef.current = pipeline;
+  }, [pipeline]);
 
   const handleToolCall = useCallback((event: AgentEvent, asset: string) => {
     const tool = event.tool;
@@ -54,26 +59,35 @@ export const useScan = () => {
     }
   }, [dispatch]);
 
-  const handleToolResult = useCallback((_event: AgentEvent, asset: string, pipeline: any) => {
-    if (pipeline.disambiguation === 'active') {
+  const handleToolResult = useCallback((_event: AgentEvent, asset: string) => {
+    const currentPipeline = pipelineRef.current;
+
+    if (currentPipeline.disambiguation === 'active') {
       dispatch(setPipelineStatus({ step: 'disambiguation', status: 'verified' }));
       dispatch(addHistory({ asset, action: 'IDENTITY_CONFIRMED' }));
     }
 
-    if (pipeline.nodes.exploit === 'active') dispatch(setNodeStatus({ node: 'exploit', status: 'completed' }));
-    if (pipeline.nodes.sec === 'active') dispatch(setNodeStatus({ node: 'sec', status: 'completed' }));
-    if (pipeline.nodes.flash === 'active') dispatch(setNodeStatus({ node: 'flash', status: 'completed' }));
+    if (currentPipeline.nodes.exploit === 'active') dispatch(setNodeStatus({ node: 'exploit', status: 'completed' }));
+    if (currentPipeline.nodes.sec === 'active') dispatch(setNodeStatus({ node: 'sec', status: 'completed' }));
+    if (currentPipeline.nodes.flash === 'active') dispatch(setNodeStatus({ node: 'flash', status: 'completed' }));
+
+    if (currentPipeline.scrape === 'active') {
+      // Logic to mark scrape as completed if no more scrapes are expected or based on result
+      // For now, let's assume it completes when we get a result from a scrape tool
+      dispatch(setPipelineStatus({ step: 'scrape', status: 'completed' }));
+    }
   }, [dispatch]);
 
   const runDemoScan = useCallback((asset: string) => {
     setTimeout(() => {
       handleToolCall({ type: 'tool_call', tool: 'search_web', input: { query: 'canonical name for ' + asset } }, asset);
       setTimeout(() => {
-        handleToolResult({ type: 'tool_result' }, asset, { disambiguation: 'active', nodes: {} });
+        handleToolResult({ type: 'tool_result' }, asset);
         handleToolCall({ type: 'tool_call', tool: 'search_web', input: { query: asset + ' exploit news' } }, asset);
         setTimeout(() => {
           handleToolCall({ type: 'tool_call', tool: 'scrape_url', input: { url: 'https://coindesk.com/' + asset } }, asset);
           setTimeout(() => {
+            handleToolResult({ type: 'tool_result' }, asset);
             handleToolCall({ type: 'tool_call', tool: 'synthesis' }, asset);
             setTimeout(() => {
               const level = Math.random() > 0.5 ? 'CRITICAL' : 'NOMINAL';
@@ -99,7 +113,7 @@ export const useScan = () => {
     }, 500);
   }, [dispatch, handleToolCall, handleToolResult]);
 
-  const startAnalysis = useCallback((asset: string, pipeline: any) => {
+  const startAnalysis = useCallback((asset: string) => {
     if (sseRef.current) sseRef.current.close();
 
     if (isDemoMode) {
@@ -121,7 +135,7 @@ export const useScan = () => {
         if (event.type === 'tool_call') {
           handleToolCall(event, asset);
         } else if (event.type === 'tool_result') {
-          handleToolResult(event, asset, pipeline);
+          handleToolResult(event, asset);
         } else if (event.type === 'verdict' && event.verdict) {
           dispatch(setPipelineStatus({ step: 'synthesis', status: 'completed' }));
           dispatch(setVerdict(event.verdict));
@@ -142,6 +156,7 @@ export const useScan = () => {
           setTimeout(connect, 2000);
         } else {
           dispatch(setError('Connection failed after multiple attempts.'));
+          dispatch(addHistory({ asset, action: 'CONNECTION_FAILED' }));
         }
       };
     };
