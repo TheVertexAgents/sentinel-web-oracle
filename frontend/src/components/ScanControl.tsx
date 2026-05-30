@@ -1,14 +1,21 @@
-import React, { useState } from 'react';
-import { useSelector } from 'react-redux';
+import React, { useState, useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../store';
+import { setCurrentAsset } from '../store/appSlice';
 
 interface ScanControlProps {
   onStartScan: (asset: string) => void;
 }
 
 const ScanControl: React.FC<ScanControlProps> = ({ onStartScan }) => {
-  const [input, setInput] = useState('');
+  const dispatch = useDispatch();
+  const currentAsset = useSelector((state: RootState) => state.app.currentAsset);
+  const [input, setInput] = useState(currentAsset);
   const isScanning = useSelector((state: RootState) => state.app.isScanning);
+
+  useEffect(() => {
+    setInput(currentAsset);
+  }, [currentAsset]);
 
   const handleScan = () => {
     const asset = input.trim().toUpperCase();
@@ -24,7 +31,10 @@ const ScanControl: React.FC<ScanControlProps> = ({ onStartScan }) => {
           <input
             type="text"
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              setInput(e.target.value);
+              dispatch(setCurrentAsset(e.target.value.toUpperCase()));
+            }}
             onKeyDown={(e) => e.key === 'Enter' && handleScan()}
             placeholder="ENTER TICKER (E.G. ETH)..."
             className="w-full bg-obsidian border border-cyan-500/30 rounded p-3 pl-4 text-cyan-400 font-mono focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 transition-all uppercase tracking-widest text-lg"

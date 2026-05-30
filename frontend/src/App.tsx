@@ -6,19 +6,17 @@ import VerdictCard from './components/VerdictCard';
 import HistoryLog from './components/HistoryLog';
 import NetworkSecurity from './components/NetworkSecurity';
 import RequestOrigins from './components/RequestOrigins';
-import { useDispatch, useSelector } from 'react-redux';
-import type { RootState } from './store';
+import { useDispatch } from 'react-redux';
 import { startScan } from './store/appSlice';
 import { useScan } from './hooks/useScan';
 
 const App: React.FC = () => {
   const dispatch = useDispatch();
-  const { pipeline } = useSelector((state: RootState) => state.app);
   const { startAnalysis } = useScan();
 
   const handleStartScan = (asset: string) => {
     dispatch(startScan(asset));
-    startAnalysis(asset, pipeline);
+    startAnalysis(asset);
   };
 
   return (

@@ -1,56 +1,59 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
+import { useSelector } from 'react-redux';
+import type { RootState } from '../store';
 
 const RequestOrigins: React.FC = () => {
-  const [activeNodes, setActiveNodes] = useState<string[]>([]);
+  const intensity = useSelector((state: RootState) => state.app.networkIntensity);
+  const pathRef = useRef<SVGPathElement>(null);
+  const fillRef = useRef<SVGPathElement>(null);
+  const phaseRef = useRef(0);
 
   useEffect(() => {
-    // Listen for custom pulse events
-    const handlePulse = (e: any) => {
-      const nodeId = e.detail;
-      setActiveNodes(prev => [...prev, nodeId]);
-      setTimeout(() => {
-        setActiveNodes(prev => prev.filter(id => id !== nodeId));
-      }, 2000);
+    let animationFrameId: number;
+
+    const animate = () => {
+      phaseRef.current += 0.05;
+      if (pathRef.current && fillRef.current) {
+        let pts = [];
+        for (let x = 0; x <= 200; x += 10) {
+          let y = 35 + Math.sin(phaseRef.current + x * 0.05) * intensity;
+          if (x % 20 === 0) y += Math.cos(phaseRef.current * 1.2 + x * 0.1) * (intensity * 0.4);
+          pts.push(`${x},${y}`);
+        }
+        const d = `M${pts.join(' L')}`;
+        pathRef.current.setAttribute('d', d);
+        fillRef.current.setAttribute('d', d + ' L200,60 L0,60 Z');
+      }
+      animationFrameId = requestAnimationFrame(animate);
     };
 
-    window.addEventListener('pulse-map', handlePulse);
-    return () => window.removeEventListener('pulse-map', handlePulse);
-  }, []);
-
-  const getNodeColor = (id: string) => {
-    if (activeNodes.includes(id)) {
-      return id === 'node-eu' ? '#ef4444' : '#00f2fe';
-    }
-    return '#484f58';
-  };
-
-  const getNodeRadius = (id: string) => {
-    return activeNodes.includes(id) ? 4 : 2;
-  };
+    animate();
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [intensity]);
 
   return (
-    <div className="panel-bg cyber-border h-48 flex flex-col">
-      <div className="p-2 border-b border-cyan-500/20 px-3">
-        <h2 className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">Request Origins</h2>
+    <div className="panel-bg cyber-border h-40 flex flex-col">
+      <div className="p-2 border-b border-cyan-500/20 flex justify-between items-center px-3">
+        <h2 className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">Traffic Intensity</h2>
+        <span className="text-[9px] font-mono text-green-500">LIVE_OPS</span>
       </div>
-      <div className="flex-1 p-2 relative bg-obsidian">
-        <svg className="w-full h-full opacity-70" viewBox="0 0 200 100">
-          <path d="M30,30 L40,25 L50,30 L60,25 L70,30 L80,35 L90,30 L100,25 L110,30 L120,35 L130,30 L140,25 L150,30 L160,25 L170,30 M20,50 L180,50 M30,70 L170,70" stroke="#484f58" strokeWidth="0.8" fill="none"></path>
-          <circle cx="45" cy="35" r={getNodeRadius('node-eu')} fill={getNodeColor('node-eu')} className="transition-all duration-500"></circle>
-          <circle cx="155" cy="45" r={getNodeRadius('node-us')} fill={getNodeColor('node-us')} className="transition-all duration-500"></circle>
-          <circle cx="100" cy="65" r={getNodeRadius('node-asia')} fill={getNodeColor('node-asia')} className="transition-all duration-500"></circle>
-          <circle cx="80" cy="25" r={getNodeRadius('node-generic')} fill={getNodeColor('node-generic')} className="transition-all duration-500"></circle>
-        </svg>
-        <div className="absolute bottom-2 left-2 flex flex-col gap-1">
-           <div className="flex items-center gap-1">
-              <div className="w-1 h-1 rounded-full bg-cyan-500"></div>
-              <span className="text-[7px] font-mono text-slate-500">US_EAST_01</span>
-           </div>
-           <div className="flex items-center gap-1">
-              <div className="w-1 h-1 rounded-full bg-threat"></div>
-              <span className="text-[7px] font-mono text-slate-500">EU_WEST_04</span>
-           </div>
+      <div className="flex-1 p-2 flex items-center justify-center relative bg-black/40">
+        <div className="absolute inset-0 flex flex-col justify-between p-2 opacity-10 pointer-events-none">
+          <div className="w-full h-px bg-slate-500"></div>
+          <div className="w-full h-px bg-slate-500"></div>
+          <div className="w-full h-px bg-slate-500"></div>
+          <div className="w-full h-px bg-slate-500"></div>
         </div>
+        <svg className="w-full h-full text-cyan-500/60 relative z-10" viewBox="0 0 200 60" preserveAspectRatio="none">
+          <path ref={pathRef} fill="none" stroke="currentColor" strokeWidth="1.5" />
+          <path ref={fillRef} fill="url(#grad-req)" stroke="none" />
+          <defs>
+            <linearGradient id="grad-req" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style={{ stopColor: 'currentColor', stopOpacity: 0.3 }} />
+              <stop offset="100%" style={{ stopColor: 'currentColor', stopOpacity: 0 }} />
+            </linearGradient>
+          </defs>
+        </svg>
       </div>
     </div>
   );
