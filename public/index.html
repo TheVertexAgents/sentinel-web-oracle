@@ -254,7 +254,7 @@
                    </div>
                 </div>
               </div>
-              <span class="text-[8px] font-mono text-slate-600">GROQ LLAMA-3.3-70B</span>
+              <span class="text-[8px] font-mono text-slate-600 uppercase" id="engine-label">Sentinel AI Engine</span>
             </div>
           </div>
         </div>
@@ -617,6 +617,11 @@
 
         if (event.type === 'tool_call') {
           handleToolCall(event);
+          if (event.provider) {
+             const label = document.getElementById('engine-label');
+             if (event.provider === 'anthropic') label.textContent = 'ANTHROPIC CLAUDE-3.5';
+             if (event.provider === 'groq') label.textContent = 'GROQ LLAMA-3.3-70B';
+          }
         } else if (event.type === 'tool_result') {
           handleToolResult(event);
         } else if (event.type === 'verdict') {
